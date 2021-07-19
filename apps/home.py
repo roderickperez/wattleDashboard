@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 from plotly import graph_objs as go
 
-# from prophet.plot import plot_plotly, plot_components_plotly
-
 
 def app():
     st.markdown('# Home')
