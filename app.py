@@ -3,8 +3,8 @@ from multiapp import MultiApp
 # import your app modules here
 # , maps, logsEDA, logsML, productionEDA, seismic, economics, MLforecast, declinationCurve
 from apps import home
-from PIL import *
-import PIL.Image
+# from PIL import *
+# import PIL.Image
 
 st.set_page_config(
     page_title="VMM-1 | Wattle",
@@ -16,7 +16,7 @@ st.set_page_config(
 app = MultiApp()
 
 # image = Image.open('images\wattleLogo.png')
-st.sidebar.image(image, width=300)
+# st.sidebar.image(image, width=300)
 
 st.sidebar.markdown("""
 # VMM-1
