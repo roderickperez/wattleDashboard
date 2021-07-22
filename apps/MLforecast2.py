@@ -118,7 +118,9 @@ def app():
         ##################################
 
     with forecast_plot:
-        production_expander.write(data)
+        # remove header of the data
+
+        st.write(data)
 
     with output_forecast:
         pass
