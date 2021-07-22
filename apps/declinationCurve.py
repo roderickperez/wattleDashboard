@@ -131,13 +131,13 @@ def app():
 
         NRI = (workingInterest/100)*(1-(royalty/100))
 
-        st.write('Net Renevue Interest (NRI): ', round(NRI, 2))
+        st.write('Net Renevue Interest (NRI) %: ', round(NRI, 2))
 
-        netPrice = NRI*gasPrice*(1-(stateTax/100))
+        netPrice = NRI*gasPrice*(1.0-(stateTax/100))
 
         st.write('Net Price ($/MCF): ', round(netPrice, 2))
 
-        economicLimit = (percentageVariableOperatingCost/100)/netPrice
+        economicLimit = (VariableOperatingCost)/netPrice
 
         st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
 
