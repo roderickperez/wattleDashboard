@@ -5,6 +5,6 @@ plotly==5.1.0
 matplotlib==3.4.2
 matplotlib-inline==0.1.2
 pillow==8.0.0
-fbprophet==0.7
 prophet==1.0.1
+cmdstanpy==0.9.68
 kats==0.1.0
