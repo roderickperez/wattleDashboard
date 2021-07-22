@@ -145,7 +145,7 @@ def app():
 
         DCAimage_expander = st.beta_expander('DCA Sketch')
 
-        image = Image.open('images\\DeclinationCurve.png')
+        image = Image.open('images/DeclinationCurve.png')
         DCAimage_expander.image(image, width=300)
 
         economicEquations_expander = DCA_params.beta_expander(
