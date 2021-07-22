@@ -93,7 +93,7 @@ def app():
 
         DCA_params.markdown('#### Economic')
 
-        economicParameters = st.beta_expander('Parameters')
+        economicParameters = DCA_params.beta_expander('Parameters')
 
         workingInterest = economicParameters.slider('Working Interest (%):',
                                                     min_value=0.0, value=100.0, max_value=100.0)
@@ -144,6 +144,8 @@ def app():
         economicLimit = (VariableOperatingCost+FixedOperatingCost)/netPrice
 
         st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
+
+        ##################################
 
         DCA_params.markdown('#### Forecast')
 
