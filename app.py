@@ -3,8 +3,8 @@ from multiapp import MultiApp
 # import your app modules here
 # , maps, logsEDA, logsML, productionEDA, seismic, economics, MLforecast, declinationCurve
 from apps import home, productionEDA, declinationCurve
-# from PIL import *
-# import PIL.Image
+from PIL import *
+import PIL.Image
 
 st.set_page_config(
     page_title="VMM-1 | Wattle",
