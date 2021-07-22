@@ -15,8 +15,8 @@ st.set_page_config(
 
 app = MultiApp()
 
-# image = Image.open('images\wattleLogo.png')
-# st.sidebar.image(image, width=300)
+image = Image.open('images/wattleLogo.png')
+st.sidebar.image(image, width=300)
 
 st.sidebar.markdown("""
 # VMM-1
