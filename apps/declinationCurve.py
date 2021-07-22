@@ -3,7 +3,7 @@ import pandas as pd
 import numpy as np
 from plotly.subplots import make_subplots
 from plotly import graph_objs as go
-from PIL import *
+from PIL import Image
 import datetime
 import warnings
 
@@ -116,18 +116,22 @@ def app():
         numberWells = economicParameters.slider('Number of Wells:',
                                                 min_value=0, value=5, max_value=10)
 
-        economicParameters.write('Fixed Operating Cost per Well:')
+        economicParameters.write('Fixed Operating Cost per Well (US$/day): ')
         FixedOperatingCost = round((
-            totalOperatingCost*(percentageFixedOperatingCost/100))/numberWells, 2)
+            (totalOperatingCost/30)*(percentageFixedOperatingCost/100))/numberWells, 2)
         economicParameters.write(FixedOperatingCost)
 
-        economicParameters.write('Variable Operating Cost per Well:')
+        economicParameters.write(
+            'Variable Operating Cost per Well (US$/day): ')
         VariableOperatingCost = round((
-            totalOperatingCost*(percentageVariableOperatingCost/100))/numberWells, 2)
+            (totalOperatingCost/30)*(percentageVariableOperatingCost/100))/numberWells, 2)
         economicParameters.write(VariableOperatingCost)
 
         gasPrice = economicParameters.slider('Gas Price ($/MCF):',
                                              min_value=0.0, value=6.60, max_value=10.0)
+
+        gasWellConsumption = economicParameters.slider('Gas Consumption (%):',
+                                                       min_value=0.0, value=2.0, max_value=10.0)
 
         NRI = (workingInterest/100)*(1-(royalty/100))
 
@@ -137,7 +141,7 @@ def app():
 
         st.write('Net Price ($/MCF): ', round(netPrice, 2))
 
-        economicLimit = (VariableOperatingCost)/netPrice
+        economicLimit = (VariableOperatingCost+FixedOperatingCost)/netPrice
 
         st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
 
