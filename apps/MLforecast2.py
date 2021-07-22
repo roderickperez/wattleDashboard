@@ -1,6 +1,7 @@
 import streamlit as st
 from statsmodels.tsa.seasonal import seasonal_decompose
 import datetime
+import copy
 
 import pandas as pd
 from prophet import Prophet
@@ -120,7 +121,29 @@ def app():
     with forecast_plot:
         # remove header of the data
 
-        st.write(data)
+        data_df = copy.copy(data)
+
+        data_df.rename(columns={'Date': 'time'}, index={
+                       'Gas Production [Kcfd]': 'production'})
+
+        st.write(data_df)
+
+        # convert to TimeSeriesData object
+
+        data_ts = TimeSeriesData(data_df)
+
+        # create a model param instance
+        # additive mode gives worse results
+        params = ProphetParams(seasonality_mode='multiplicative')
+
+        # create a prophet model instance
+        m = ProphetModel(data_ts, params)
+
+        # fit model simply by calling m.fit()
+        m.fit()
+
+        # make prediction for next 30 month
+        fcst = m.predict(steps=30, freq="D")
 
     with output_forecast:
         pass
