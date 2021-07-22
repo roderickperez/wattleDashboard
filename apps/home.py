@@ -11,8 +11,8 @@ def app():
 
     @st.cache
     def load_data():
-        data = pd.read_csv(
-            'F:\\Documents\\ScientiaGROUP\\Wattle Petroleum SAS\\PythonProject\\StreamlitDashboardFINAL\\data\\VMM1_AllWells_DetailedProduction_Updated.csv', header=None, infer_datetime_format=True)
+        data = pd.read_csv('data/VMM1_AllWells_DetailedProduction_Updated.csv',
+                           header=None, infer_datetime_format=True)
         data.columns = ['Date', 'DP in H2O', 'Well Head Pressure [PSI]', 'Casing Pressure [Psi]', 'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
                         'Current Uplift (14/64") [MCFD]', 'Temp Line [°F]', 'Pressure Line [PSI]', 'Heater Temperature [°F]', 'Orifice Plate', 'Gas Production [Kcfd]', 'After Opening to 12/64" Current Flowrate', 'Current Uplift (12/64") [MCFD]', 'Gas Comsuption [Kcfd]', 'Volumen Oil [Bbls]', 'Volumen Condensate [bls/d]', 'Volumen Water [bls/d]', 'Ambient Temperature [°F]', 'Tubing Head Temperature [°F]',  'Well Name']
 
