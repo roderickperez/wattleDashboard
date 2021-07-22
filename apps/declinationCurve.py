@@ -102,7 +102,7 @@ def app():
                                             min_value=0.0, value=11.4, max_value=100.0)
 
         stateTax = economicParameters.slider('State Tax (%):',
-                                             min_value=0.0, value=0.0, max_value=100.0)
+                                             min_value=0.0, value=0.1, max_value=100.0)
 
         totalOperatingCost = economicParameters.slider('TOTAL Operating Cost ($/month):',
                                                        min_value=0.0, value=135000.0, max_value=1000000.0)
