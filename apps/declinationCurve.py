@@ -98,14 +98,39 @@ def app():
         workingInterest = economicParameters.slider('Working Interest (%):',
                                                     min_value=0.0, value=100.0, max_value=100.0)
 
-        royalty = economicParameters.slider('Royalty (%):',
-                                            min_value=0.0, value=0.0, max_value=100.0)
+        royalty = economicParameters.slider('Effective Royalty | ANH (%):',
+                                            min_value=0.0, value=11.4, max_value=100.0)
 
         stateTax = economicParameters.slider('State Tax (%e):',
                                              min_value=0.0, value=20.0, max_value=100.0)
 
-        operatingCost = economicParameters.slider('Operating Cost ($/day):',
-                                                  min_value=0.0, value=2500.0, max_value=10000.0)
+        totalOperatingCost = economicParameters.slider('TOTAL Operating Cost ($/month):',
+                                                       min_value=0.0, value=135000.0, max_value=1000000.0)
+
+        percentageFixedOperatingCost = economicParameters.slider('Fixed Operating Cost (%):',
+                                                                 min_value=0.0, value=0.75, max_value=1.0)
+
+        percentageVariableOperatingCost = economicParameters.slider('Variable Operating Cost (%):',
+                                                                    min_value=0.0, value=1-percentageFixedOperatingCost, max_value=1.0)
+
+        economicParameters.write('Fixed Operating Cost:')
+        economicParameters.write(percentageFixedOperatingCost)
+
+        economicParameters.write('Variable Operating Cost:')
+        economicParameters.write(percentageVariableOperatingCost)
+
+        numberWells = economicParameters.slider('Number of Wells:',
+                                                min_value=0, value=5, max_value=10)
+
+        economicParameters.write('Fixed Operating Cost per Well:')
+        percentageFixedOperatingCost = (
+            totalOperatingCost*percentageFixedOperatingCost)/numberWells
+        economicParameters.write(percentageFixedOperatingCost)
+
+        economicParameters.write('Variable Operating Cost per Well:')
+        percentageVariableOperatingCost = (
+            totalOperatingCost*percentageVariableOperatingCost)/numberWells
+        economicParameters.write(percentageVariableOperatingCost)
 
         gasPrice = economicParameters.slider('Gas Price ($/MCF):',
                                              min_value=0.0, value=6.60, max_value=10.0)
@@ -117,7 +142,7 @@ def app():
 
         st.write('Net Price ($/MCF): ', round(netPrice, 2))
 
-        economicLimit = operatingCost/netPrice
+        economicLimit = percentageVariableOperatingCost/netPrice
 
         st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
 
