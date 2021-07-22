@@ -102,7 +102,7 @@ def app():
                                             min_value=0.0, value=11.4, max_value=100.0)
 
         stateTax = economicParameters.slider('State Tax (%e):',
-                                             min_value=0.0, value=20.0, max_value=100.0)
+                                             min_value=0.0, value=0.0, max_value=100.0)
 
         totalOperatingCost = economicParameters.slider('TOTAL Operating Cost ($/month):',
                                                        min_value=0.0, value=135000.0, max_value=1000000.0)
@@ -113,24 +113,18 @@ def app():
         percentageVariableOperatingCost = economicParameters.slider('Variable Operating Cost (%):',
                                                                     min_value=0.0, value=1-percentageFixedOperatingCost, max_value=1.0)
 
-        economicParameters.write('Fixed Operating Cost:')
-        economicParameters.write(percentageFixedOperatingCost)
-
-        economicParameters.write('Variable Operating Cost:')
-        economicParameters.write(percentageVariableOperatingCost)
-
         numberWells = economicParameters.slider('Number of Wells:',
                                                 min_value=0, value=5, max_value=10)
 
         economicParameters.write('Fixed Operating Cost per Well:')
-        percentageFixedOperatingCost = (
+        FixedOperatingCost = round((
             totalOperatingCost*percentageFixedOperatingCost)/numberWells
-        economicParameters.write(percentageFixedOperatingCost)
+            economicParameters.write(FixedOperatingCost), 2)
 
         economicParameters.write('Variable Operating Cost per Well:')
-        percentageVariableOperatingCost = (
+        VariableOperatingCost = round((
             totalOperatingCost*percentageVariableOperatingCost)/numberWells
-        economicParameters.write(percentageVariableOperatingCost)
+            economicParameters.write(VariableOperatingCost), 2)
 
         gasPrice = economicParameters.slider('Gas Price ($/MCF):',
                                              min_value=0.0, value=6.60, max_value=10.0)
