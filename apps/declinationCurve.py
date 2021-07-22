@@ -111,7 +111,7 @@ def app():
                                                                  min_value=0.0, value=75.0, max_value=100.0)
 
         percentageVariableOperatingCost = economicParameters.slider('Variable Operating Cost (%):',
-                                                                    min_value=0.0, value=1.0-percentageFixedOperatingCost, max_value=100.0)
+                                                                    min_value=0.0, value=100.0-percentageFixedOperatingCost, max_value=100.0)
 
         numberWells = economicParameters.slider('Number of Wells:',
                                                 min_value=0, value=5, max_value=10)
@@ -130,25 +130,25 @@ def app():
                                              min_value=0.0, value=6.60, max_value=10.0)
 
         NRI = (workingInterest/100)*(1-(royalty/100))
-        st.write('Net Renevue Interest (NRI): ', round(NRI), 2)
+        st.write('Net Renevue Interest (NRI): ', round(NRI, 2)
 
-        netPrice = NRI*gasPrice*(1-(stateTax/100))
+        netPrice=NRI*gasPrice*(1-(stateTax/100))
 
         st.write('Net Price ($/MCF): ', round(netPrice, 2))
 
-        economicLimit = (percentageVariableOperatingCost/100)/netPrice
+        economicLimit=(percentageVariableOperatingCost/100)/netPrice
 
         st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
 
         DCA_params.markdown('#### Forecast')
 
-        foreecastParameters = st.beta_expander('Parameters')
-        forecast_days = foreecastParameters.slider('Days:',
+        foreecastParameters=st.beta_expander('Parameters')
+        forecast_days=foreecastParameters.slider('Days:',
                                                    min_value=0, value=1825, max_value=3650)
 
         DCA_params.markdown('#### Equations')
 
-        arpsEquation_expander = st.beta_expander('Arps Equation')
+        arpsEquation_expander=st.beta_expander('Arps Equation')
 
         arpsEquation_expander.write('Arps Equation')
         arpsEquation_expander.markdown(
@@ -162,12 +162,12 @@ def app():
         arpsEquation_expander.markdown(
             '$D = \\frac{D_{i}}{1+bD_{i}t}$')
 
-        DCAimage_expander = st.beta_expander('DCA Sketch')
+        DCAimage_expander=st.beta_expander('DCA Sketch')
 
-        image = Image.open('images/DeclinationCurve.png')
+        image=Image.open('images/DeclinationCurve.png')
         DCAimage_expander.image(image, width=300)
 
-        economicEquations_expander = DCA_params.beta_expander(
+        economicEquations_expander=DCA_params.beta_expander(
             'Economics')
 
         economicEquations_expander.write('Net Cash Flow Eq')
@@ -194,55 +194,55 @@ def app():
             '$q_{ecl} = \\frac{Operating Cost}{Net Price}$')
         #############################################
 
-        arpsFlowRate = []
+        arpsFlowRate=[]
 
         for i in range(len(data)):
-            flow = ArpsRate(qi, Di, b, i)
+            flow=ArpsRate(qi, Di, b, i)
             arpsFlowRate.append(flow)
 
-        data['arpsFlowRate'] = arpsFlowRate
+        data['arpsFlowRate']=arpsFlowRate
 
-        data_edit = data['Gas Production [Kcfd]'].replace(0, np.nan)
+        data_edit=data['Gas Production [Kcfd]'].replace(0, np.nan)
 
-        data['error'] = abs((data_edit -
+        data['error']=abs((data_edit -
                             data['arpsFlowRate'])/data['Gas Production [Kcfd]'])  # Absolute Relative Error
 
-        firstDay_Forecast = datetime.datetime.strptime(
+        firstDay_Forecast=datetime.datetime.strptime(
             data['Date'].iloc[0], '%m/%d/%Y').date()
 
-        endDay_Forecast_ = datetime.datetime.strptime(
+        endDay_Forecast_=datetime.datetime.strptime(
             data['Date'].iloc[-1], '%m/%d/%Y').date()
 
-        endDay_Forecast = endDay_Forecast_ + \
+        endDay_Forecast=endDay_Forecast_ + \
             pd.to_timedelta(forecast_days, unit='d')
 
-        DCA_forecast = []
+        DCA_forecast=[]
 
-        forecast_dateList = pd.date_range(
+        forecast_dateList=pd.date_range(
             firstDay_Forecast, endDay_Forecast, freq='d')
 
-        DCA_forecast = pd.DataFrame(np.array(
+        DCA_forecast=pd.DataFrame(np.array(
             forecast_dateList.to_pydatetime(), dtype=np.datetime64), columns=['Date'])
 
         # data['newDate'] = pd.DataFrame(np.array(
         # forecast_dateList.to_pydatetime(), dtype=np.datetime64), columns=['Date'])
 
-        DCA_forecast['Date'] = pd.to_datetime(DCA_forecast['Date']).dt.date
+        DCA_forecast['Date']=pd.to_datetime(DCA_forecast['Date']).dt.date
 
-        data['Date'] = pd.to_datetime(data['Date']).dt.date
+        data['Date']=pd.to_datetime(data['Date']).dt.date
 
-        arpsFlowRate_Forecast = []
+        arpsFlowRate_Forecast=[]
 
         for i in range(len(DCA_forecast)):
-            flow_Forecast = ArpsRate(qi, Di, b, i)
+            flow_Forecast=ArpsRate(qi, Di, b, i)
             arpsFlowRate_Forecast.append(flow_Forecast)
 
-        DCA_forecast['arpsFlowRate_Forecast'] = arpsFlowRate_Forecast
+        DCA_forecast['arpsFlowRate_Forecast']=arpsFlowRate_Forecast
 
     with prod_plot:
         st.markdown('## Plot')
 
-        fig = make_subplots(rows=2, cols=1,
+        fig=make_subplots(rows=2, cols=1,
                             shared_xaxes=True,
                             vertical_spacing=0.02)
 
@@ -284,8 +284,8 @@ def app():
         DCA_output.markdown(
             f"#### Gas Cum Production [Mcf]")
 
-        gasProduced_ = round(data['Gas Production [Kcfd]'].sum(), 2)
-        gasProduced = f"{gasProduced_:,}"
+        gasProduced_=round(data['Gas Production [Kcfd]'].sum(), 2)
+        gasProduced=f"{gasProduced_:,}"
 
         DCA_output.markdown(
             f"<h1 style = 'text-align: center; color: black;'>{gasProduced}</h1>", unsafe_allow_html=True)
@@ -293,21 +293,21 @@ def app():
         DCA_output.markdown(
             f"#### Gas Reserves [Mcf]")
 
-        nomDecline_ = nominalDecline(
+        nomDecline_=nominalDecline(
             Di, b, DCA_forecast.arpsFlowRate_Forecast[len(DCA_forecast)-1])
 
-        gasReservesDCA_ = round(cumProduction(DCA_forecast.arpsFlowRate_Forecast[len(
+        gasReservesDCA_=round(cumProduction(DCA_forecast.arpsFlowRate_Forecast[len(
             DCA_forecast)-1], nomDecline_, b, economicLimit), 2)
-        gasReservesDCA = f"{gasReservesDCA_:,}"
+        gasReservesDCA=f"{gasReservesDCA_:,}"
         DCA_output.markdown(
             f"<h1 style = 'text-align: center; color: black;'>{gasReservesDCA}</h1>", unsafe_allow_html=True)
 
         DCA_output.markdown(
             f"#### EUR [Mcf]")
 
-        EUR_ = round(gasProduced_ + gasReservesDCA_, 2)
+        EUR_=round(gasProduced_ + gasReservesDCA_, 2)
 
-        EUR = f"{EUR_:,}"
+        EUR=f"{EUR_:,}"
         DCA_output.markdown(
             f"<h1 style = 'text-align: center; color: black;'>{EUR}</h1>", unsafe_allow_html=True)
 
@@ -316,14 +316,14 @@ def app():
         st.markdown(
             f"###### DCA Error")
 
-        DCA_error = round(data['error'].sum(), 2)
-        DCA_error = f"{DCA_error:,}"
+        DCA_error=round(data['error'].sum(), 2)
+        DCA_error=f"{DCA_error:,}"
         DCA_output.markdown(
             f"<h3 style = 'text-align: center; color: black;'>{DCA_error}%</h3>", unsafe_allow_html=True)
 
         DCA_output.markdown(
             f"###### Nominal Decline")
 
-        nomDecline = round(nomDecline_*100, 4)
+        nomDecline=round(nomDecline_*100, 4)
         DCA_output.markdown(
             f"<h3 style = 'text-align: center; color: black;'>{nomDecline}%</h3>", unsafe_allow_html=True)
