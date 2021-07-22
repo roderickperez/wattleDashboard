@@ -45,7 +45,7 @@ def app():
         (1, 2, 1))
 
     with forecast_params:
-        st.markdown('## Parameters')
+        forecast_params.markdown('## Parameters')
         wells = ("Caramelo-2", "Caramelo-3", "Toposi-1",
                  "Toposi-2H", "LaEstancia-1H")
         selected_well = st.selectbox("Select a well", wells)
@@ -60,3 +60,65 @@ def app():
         st.write('Total days:', total_days)
 
         ##################################
+
+        forecast_params.markdown('#### Economic')
+
+        economicParameters = forecast_params.beta_expander('Parameters')
+
+        workingInterest = economicParameters.slider('Working Interest (%):',
+                                                    min_value=0.0, value=100.0, max_value=100.0)
+
+        royalty = economicParameters.slider('Effective Royalty | ANH (%):',
+                                            min_value=0.0, value=11.4, max_value=100.0)
+
+        stateTax = economicParameters.slider('State Tax (%):',
+                                             min_value=0.0, value=0.0, max_value=100.0)
+
+        totalOperatingCost = economicParameters.slider('TOTAL Operating Cost ($/month):',
+                                                       min_value=0.0, value=135000.0, max_value=1000000.0)
+
+        percentageFixedOperatingCost = economicParameters.slider('Fixed Operating Cost (%):',
+                                                                 min_value=0.0, value=75.0, max_value=100.0)
+
+        percentageVariableOperatingCost = economicParameters.slider('Variable Operating Cost (%):',
+                                                                    min_value=0.0, value=100.0-percentageFixedOperatingCost, max_value=100.0)
+
+        numberWells = economicParameters.slider('Number of Wells:',
+                                                min_value=0, value=5, max_value=10)
+
+        economicParameters.write('Fixed Operating Cost per Well (US$/day): ')
+        FixedOperatingCost = round((
+            (totalOperatingCost/30)*(percentageFixedOperatingCost/100))/numberWells, 2)
+        economicParameters.write(FixedOperatingCost)
+
+        economicParameters.write(
+            'Variable Operating Cost per Well (US$/day): ')
+        VariableOperatingCost = round((
+            (totalOperatingCost/30)*(percentageVariableOperatingCost/100))/numberWells, 2)
+        economicParameters.write(VariableOperatingCost)
+
+        gasPrice = economicParameters.slider('Gas Price ($/MCF):',
+                                             min_value=0.0, value=6.60, max_value=10.0)
+
+        gasWellConsumption = economicParameters.slider('Gas Consumption (%):',
+                                                       min_value=0.0, value=2.0, max_value=10.0)
+
+        NRI = (workingInterest/100)*(1-(royalty/100))
+
+        st.write('Net Renevue Interest (NRI) %: ', round(NRI, 2))
+
+        netPrice = NRI*gasPrice*(1.0-(stateTax/100))
+
+        st.write('Net Price ($/MCF): ', round(netPrice, 2))
+
+        economicLimit = (VariableOperatingCost+FixedOperatingCost)/netPrice
+
+        st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
+
+        ##################################
+
+    with forecast_plot:
+        production_expander.write(data)
+
+    with output_forecast:
+        pass
