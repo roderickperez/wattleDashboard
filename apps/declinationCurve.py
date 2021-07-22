@@ -113,12 +113,6 @@ def app():
         percentageVariableOperatingCost = economicParameters.slider('Variable Operating Cost (%):',
                                                                     min_value=0.0, value=1-percentageFixedOperatingCost, max_value=1.0)
 
-        economicParameters.write('Fixed Operating Cost:')
-        economicParameters.write(percentageFixedOperatingCost)
-
-        economicParameters.write('Variable Operating Cost:')
-        economicParameters.write(percentageVariableOperatingCost)
-
         numberWells = economicParameters.slider('Number of Wells:',
                                                 min_value=0, value=5, max_value=10)
 
