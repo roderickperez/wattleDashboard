@@ -10,4 +10,4 @@ cmdstanpy
 kats==0.1.0
 statsmodels==0.12.2
 pystan==2.19.1.1
-fbprophet==0.7
+fbprophet==0.7.1
