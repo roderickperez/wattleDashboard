@@ -4,8 +4,8 @@ import datetime
 
 import pandas as pd
 from prophet import Prophet
-from prophet.diagnostics import cross_validation
-from prophet.diagnostics import performance_metrics
+# from prophet.diagnostics import cross_validation
+# from prophet.diagnostics import performance_metrics
 from prophet.plot import plot_cross_validation_metric
 
 from prophet.plot import plot_plotly, plot_components_plotly

@@ -8,3 +8,4 @@ pillow==8.0.0
 prophet
 cmdstanpy
 kats==0.1.0
+statsmodels==0.12.2
