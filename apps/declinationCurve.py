@@ -129,10 +129,10 @@ def app():
         gasPrice = economicParameters.slider('Gas Price ($/MCF):',
                                              min_value=0.0, value=6.60, max_value=10.0)
 
-        NRI = (workingInterest/100)*(1-(royalty/100))
-        st.write('Net Renevue Interest (NRI): ', NRI)
+        NRI = (workingInterest/100)*(1-(royalty))
+        st.write('Net Renevue Interest (NRI): ', round(NRI), 2)
 
-        netPrice = NRI*gasPrice*(1-(stateTax/100))
+        netPrice = NRI*gasPrice*(1-(stateTax))
 
         st.write('Net Price ($/MCF): ', round(netPrice, 2))
 
