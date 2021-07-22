@@ -108,10 +108,10 @@ def app():
                                                        min_value=0.0, value=135000.0, max_value=1000000.0)
 
         percentageFixedOperatingCost = economicParameters.slider('Fixed Operating Cost (%):',
-                                                                 min_value=0.0, value=0.75, max_value=1.0)
+                                                                 min_value=0.0, value=75.0, max_value=100.0)
 
         percentageVariableOperatingCost = economicParameters.slider('Variable Operating Cost (%):',
-                                                                    min_value=0.0, value=1-percentageFixedOperatingCost, max_value=1.0)
+                                                                    min_value=0.0, value=1.0-percentageFixedOperatingCost, max_value=100.0)
 
         numberWells = economicParameters.slider('Number of Wells:',
                                                 min_value=0, value=5, max_value=10)
@@ -129,10 +129,10 @@ def app():
         gasPrice = economicParameters.slider('Gas Price ($/MCF):',
                                              min_value=0.0, value=6.60, max_value=10.0)
 
-        NRI = (workingInterest/100)*(1-(royalty))
+        NRI = (workingInterest/100)*(1-(royalty/100))
         st.write('Net Renevue Interest (NRI): ', round(NRI), 2)
 
-        netPrice = NRI*gasPrice*(1-(stateTax))
+        netPrice = NRI*gasPrice*(1-(stateTax/100))
 
         st.write('Net Price ($/MCF): ', round(netPrice, 2))
 
