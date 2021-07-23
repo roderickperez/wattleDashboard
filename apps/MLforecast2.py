@@ -14,7 +14,7 @@ from plotly import graph_objs as go
 from plotly.subplots import make_subplots
 import warnings
 
-# Kats Import
+# Kats Model Import
 from kats.consts import TimeSeriesData
 from kats.models.prophet import ProphetModel, ProphetParams
 from kats.models.theta import ThetaModel, ThetaParams
@@ -23,12 +23,21 @@ from kats.models.arima import ARIMAModel, ARIMAParams
 from kats.models.holtwinters import HoltWintersParams, HoltWintersModel
 from kats.models.linear_model import LinearModel, LinearModelParams
 from kats.models.quadratic_model import QuadraticModel, QuadraticModelParams
+
 # Vector autoregression (VAR) used in Multivariable forecasting
 from kats.models.var import VARModel, VARParams
 
 
 from kats.models.ensemble.ensemble import EnsembleParams, BaseModelParams
 from kats.models.ensemble.kats_ensemble import KatsEnsemble
+
+# Hyperparameter tuning libraries
+import kats.utils.time_series_parameter_tuning as tpt
+from kats.consts import ModelEnum, SearchMethodEnum, TimeSeriesData
+
+from ax.core.parameter import ChoiceParameter, FixedParameter, ParameterType
+from ax.models.random.sobol import SobolGenerator
+from ax.models.random.uniform import UniformGenerator
 
 
 warnings.simplefilter('ignore')
@@ -517,7 +526,7 @@ def app():
             fig.add_hline(y=economicLimit,  line_width=1,
                           line_dash="dash", line_color="black", row=1, col=1)
 
-            #fig.update_layout(width=1300, height=700)
+            # fig.update_layout(width=1300, height=700)
             fig.update_layout(showlegend=False)
 
             forecast_plot.plotly_chart(fig)
@@ -561,19 +570,27 @@ def app():
             fig.add_hline(y=economicLimit,  line_width=1,
                           line_dash="dash", line_color="black")
 
-            #fig.update_layout(width=1300, height=700)
+            # fig.update_layout(width=1300, height=700)
 
-            fig.update_layout(showlegend=False,
-                              autosize=True,
-                              #   width=500,
-                              #   height=500,
-                              margin=dict(
-                                  l=0,
-                                  r=0,
-                                  b=0,
-                                  t=0,
-                                  pad=0
-                              ))
+            fig.update_layout(legend=dict(
+                orientation="h",
+                #     yanchor="bottom",
+                #     yanchor="top",
+                #     y=0.99,
+                #     xanchor="right",
+                #     x=0.01
+            ),
+                # showlegend=False,
+                autosize=False,
+                #   width=500,
+                #   height=500,
+                margin=dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=0
+            ))
             fig.update_xaxes(automargin=True)
             fig.update_yaxes(automargin=True)
 
