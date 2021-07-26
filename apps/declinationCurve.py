@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from plotly.subplots import make_subplots
+from statsmodels.tsa.seasonal import seasonal_decompose
 from plotly import graph_objs as go
 from PIL import Image
 import datetime
@@ -116,16 +117,17 @@ def app():
         numberWells = economicParameters.slider('Number of Wells:',
                                                 min_value=0, value=5, max_value=10)
 
-        economicParameters.write('Fixed Operating Cost per Well (US$/day): ')
         FixedOperatingCost = round((
             (totalOperatingCost/30)*(percentageFixedOperatingCost/100))/numberWells, 2)
-        economicParameters.write(FixedOperatingCost)
 
         economicParameters.write(
-            'Variable Operating Cost per Well (US$/day): ')
+            'Fixed Operating Cost per Well (US$/day): ' + str(FixedOperatingCost))
+
         VariableOperatingCost = round((
             (totalOperatingCost/30)*(percentageVariableOperatingCost/100))/numberWells, 2)
-        economicParameters.write(VariableOperatingCost)
+
+        economicParameters.write(
+            'Variable Operating Cost per Well (US$/day): ' + str(VariableOperatingCost))
 
         gasPrice = economicParameters.slider('Gas Price ($/MCF):',
                                              min_value=0.0, value=6.60, max_value=10.0)
@@ -135,23 +137,49 @@ def app():
 
         NRI = (workingInterest/100)*(1-(royalty/100))
 
-        st.write('Net Renevue Interest (NRI) %: ', round(NRI, 2))
+        economicParameters.write(
+            'Net Renevue Interest (NRI) %: ' + str(round(NRI, 2)))
 
         netPrice = NRI*gasPrice*(1.0-(stateTax/100))
 
-        st.write('Net Price ($/MCF): ', round(netPrice, 2))
+        economicParameters.write(
+            'Net Price ($/MCF): ' + str(round(netPrice, 2)))
 
         economicLimit = (VariableOperatingCost+FixedOperatingCost)/netPrice
 
-        st.write('Economic Limit (MCF/d): ', round(economicLimit, 2))
+        economicParameters.write(
+            'Economic Limit (MCF/d): ' + str(round(economicLimit, 2)))
 
         ##################################
 
         DCA_params.markdown('#### Forecast')
 
-        foreecastParameters = st.beta_expander('Parameters')
-        forecast_days = foreecastParameters.slider('Days:',
-                                                   min_value=0, value=1825, max_value=3650)
+        forecastParameters = st.beta_expander('Parameters')
+        forecast_days = forecastParameters.slider('Days:',
+                                                  min_value=0, value=1825, max_value=3650)
+
+        seasonalModelType = ['additive', 'multiplicative']
+
+        seasonalModel_Type = forecastParameters.radio(
+            'Seasonal Model Type', seasonalModelType)
+
+        production_params_checkbox = forecastParameters.radio(
+            'Seasonality Periods: ', ['Monthly', 'Yearly', 'Daily', 'Custom'])
+
+        if (production_params_checkbox == 'Daily'):
+            seasonalityPeriod = 1
+        elif (production_params_checkbox == 'Monthly'):
+            seasonalityPeriod = 30
+        elif (production_params_checkbox == 'Yearly'):
+            seasonalityPeriod = 365
+        else:
+            seasonalityPeriod = forecastParameters.slider('Period:',
+                                                          min_value=1, value=30, max_value=365)
+
+        showTrendCheck = forecastParameters.radio(
+            'Show Trend in Plot:', [True, False])
+
+        ##################################
 
         DCA_params.markdown('#### Equations')
 
@@ -209,10 +237,21 @@ def app():
 
         data['arpsFlowRate'] = arpsFlowRate
 
-        data_edit = data['Gas Production [Kcfd]'].replace(0, np.nan)
+        data_edit = data['Gas Production [Kcfd]']
+        data_edit_ = data_edit.replace(0, np.nan)
+        #data_edit_ = data_edit.dropna()
+
+        # Filling null value with the next ones
+        data_edit_ = data_edit.fillna(method='bfill')
+
+        dataSeasonal = seasonal_decompose(
+            data_edit_, model=seasonalModel_Type, period=seasonalityPeriod)
 
         data['error'] = abs((data_edit -
-                             data['arpsFlowRate'])/data['Gas Production [Kcfd]'])  # Absolute Relative Error
+                             data['arpsFlowRate'])/data['Gas Production [Kcfd]'])
+
+        data['relativeError'] = abs((data_edit -
+                                     data['arpsFlowRate'])/dataSeasonal.seasonal)   # Absolute Relative Error
 
         firstDay_Forecast = datetime.datetime.strptime(
             data['Date'].iloc[0], '%m/%d/%Y').date()
@@ -247,6 +286,7 @@ def app():
         DCA_forecast['arpsFlowRate_Forecast'] = arpsFlowRate_Forecast
 
     with prod_plot:
+
         st.markdown('## Plot')
 
         fig = make_subplots(rows=2, cols=1,
@@ -256,6 +296,11 @@ def app():
         fig.add_trace(go.Scatter(
             x=data['Date'], y=data['Gas Production [Kcfd]'], name='Gas Production [Kcfd]'),
             row=1, col=1)
+
+        if showTrendCheck == True:
+            fig.add_trace(go.Scatter(
+                x=data['Date'], y=dataSeasonal.trend, name='Trend'),
+                row=1, col=1)
 
         fig.add_trace(go.Scatter(
             x=DCA_forecast['Date'], y=DCA_forecast['arpsFlowRate_Forecast'], name='Forecast'),
@@ -282,6 +327,10 @@ def app():
         fig.add_trace(go.Scatter(
             x=data['Date'], y=data['error'], name='Absolute Relative Error [Kcfd]'),
             row=2, col=1)
+
+        # fig.add_trace(go.Scatter(
+        #     x=data['Date'], y=data['relativeError'], name='Absolute Relative Error [Kcfd]'),
+        #     row=2, col=1)
 
         st.plotly_chart(fig)
 
@@ -321,16 +370,26 @@ def app():
         st.markdown("<hr/>", unsafe_allow_html=True)
 
         st.markdown(
-            f"###### DCA Error")
+            f"###### DCA Error (Original Data)")
 
         DCA_error = round(data['error'].sum(), 2)
+
         DCA_error = f"{DCA_error:,}"
         DCA_output.markdown(
             f"<h3 style = 'text-align: center; color: black;'>{DCA_error}%</h3>", unsafe_allow_html=True)
 
+        # st.markdown(
+        #     f"###### DCA Error (Seasonal Data)")
+
+        # DCA_relativeError = round(data['relativeError'].sum(), 2)
+
+        # DCA_relativeError = f"{DCA_relativeError:,}"
+        # DCA_output.markdown(
+        #     f"<h3 style = 'text-align: center; color: black;'>{DCA_relativeError}%</h3>", unsafe_allow_html=True)
+
         DCA_output.markdown(
             f"###### Nominal Decline")
 
-        nomDecline = round(nomDecline_*100, 4)
+        nomDecline = round(nomDecline_*10000, 2)
         DCA_output.markdown(
             f"<h3 style = 'text-align: center; color: black;'>{nomDecline}%</h3>", unsafe_allow_html=True)

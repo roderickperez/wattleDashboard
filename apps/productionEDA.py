@@ -2,6 +2,8 @@ import streamlit as st
 import numpy as np
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import seasonal_decompose
+import statsmodels.api as sm
+from statsmodels.tsa.stattools import adfuller
 import pandas as pd
 from plotly import graph_objs as go
 import warnings
@@ -37,7 +39,8 @@ def app():
 
     ##########
 
-    production_params, production_plot = st.beta_columns((1, 4))
+    production_params, production_plot, summary_statistics = st.beta_columns(
+        (1, 4, 1))
 
     with production_params:
         st.markdown('## Parameters')
@@ -99,8 +102,12 @@ def app():
                             x=data_laEstancia_1H['Date'], y=data_laEstancia_1H[plot_selectionVariable], name="La Estancia-1H"))
                         fig.layout.update(xaxis_rangeslider_visible=True)
 
-                        fig.update_layout(width=1300, height=700)
+                        fig.update_layout(width=1100, height=700)
                         production_plot.plotly_chart(fig)
+
+                        with summary_statistics:
+                            summary_statistics.markdown('## Summary')
+                            summary_statistics.write('Marico el que lo lea')
 
                     else:
                         fig = make_subplots(
@@ -121,8 +128,12 @@ def app():
                         fig.add_trace(go.Scatter(
                             x=data_laEstancia_1H['Date'], y=data_laEstancia_1H[plot_selectionVariable], name="La Estancia-1H"), row=5, col=1)
 
-                        fig.update_layout(width=1300, height=700)
+                        fig.update_layout(width=1100, height=700)
                         production_plot.plotly_chart(fig)
+
+                        with summary_statistics:
+                            summary_statistics.markdown('## Summary')
+                            summary_statistics.write('Marico el que lo lea')
 
             elif (plot_Type == 'Boxplot'):
 
@@ -145,8 +156,12 @@ def app():
                 fig.add_trace(go.Box(
                     y=data_laEstancia_1H[plot_selectionVariable], name="La Estancia-1H"))
 
-                fig.update_layout(width=1300, height=700)
+                fig.update_layout(width=1100, height=700)
                 production_plot.plotly_chart(fig)
+
+                with summary_statistics:
+                    summary_statistics.markdown('## Summary')
+                    summary_statistics.write('Marico el que lo lea')
 
             elif (plot_Type == 'Hist'):
 
@@ -179,21 +194,25 @@ def app():
                 if (hist_Mode == 'overlay'):
 
                     fig.update_layout(barmode=hist_Mode,
-                                      width=1300, height=630)
+                                      width=1100, height=630)
                     fig.update_traces(opacity=histOpacity)
                     production_plot.plotly_chart(fig)
 
                 elif (hist_Mode == 'stack'):
                     fig.update_layout(barmode=hist_Mode,
-                                      width=1300, height=630)
+                                      width=1100, height=630)
                     production_plot.plotly_chart(fig)
 
                 else:
-                    fig.update_layout(width=1300, height=630)
+                    fig.update_layout(width=1100, height=630)
                     production_plot.plotly_chart(fig)
 
                 production_plot.write(
                     'Note: Zero values were replaced by NAN.')
+
+                with summary_statistics:
+                    summary_statistics.markdown('## Summary')
+                    summary_statistics.write('Marico el que lo lea')
 
         else:
             wells = ("Caramelo-2", "Caramelo-3", "Toposi-1",
@@ -208,36 +227,50 @@ def app():
             plot_selectionVariable = production_params.selectbox(
                 'Feature:', columns)
 
-            plotType = ['Full', 'Trend']
+            plotType = ['Full', 'Decomposition']
 
             plot_Type = production_params.radio('Plot Type', plotType)
 
             if (plot_Type == 'Full'):
-                production_plot.markdown('### Plot')
-                production_plot.markdown('#### Scatter | Full')
+                production_plot.markdown('## Plot')
+                production_plot.markdown('### Scatter | Full')
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=data['Date'], y=data[plot_selectionVariable]))
                 fig.layout.update(xaxis_rangeslider_visible=True)
 
-                fig.update_layout(width=1300, height=700)
+                fig.update_layout(width=1100, height=700)
                 production_plot.plotly_chart(fig)
 
+                with summary_statistics:
+                    summary_statistics.markdown('## Summary')
+                    summary_statistics.write('Marico el que lo lea')
+
             else:
-                production_plot.markdown('### Plot')
-                production_plot.markdown('#### Scatter | Trend')
+                production_plot.markdown('## Plot')
+                production_plot.markdown('### Scatter | Decomposition')
 
                 seasonalModelType = ['additive', 'multiplicative']
 
                 seasonalModel_Type = production_params.radio(
                     'Seasonal Model Type', seasonalModelType)
 
-                modelPeriod = production_params.slider('Period:',
-                                                       min_value=1, value=30, max_value=365)
+                production_params_checkbox = production_params.radio(
+                    'Seasonality Periods: ', ['Daily', 'Monthly', 'Yearly', 'Custom'])
+
+                if (production_params_checkbox == 'Daily'):
+                    seanalityPeriod = 1
+                elif (production_params_checkbox == 'Monthly'):
+                    seanalityPeriod = 30
+                elif (production_params_checkbox == 'Yearly'):
+                    seanalityPeriod = 365
+                else:
+                    seanalityPeriod = production_params.slider('Period:',
+                                                               min_value=1, value=30, max_value=365)
 
                 dataSeasonal = seasonal_decompose(
-                    data[plot_selectionVariable], model=seasonalModel_Type, period=modelPeriod)
+                    data[plot_selectionVariable], model=seasonalModel_Type, period=seanalityPeriod)
 
                 fig = make_subplots(
                     rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.02)
@@ -251,5 +284,42 @@ def app():
                 fig.add_trace(go.Scatter(
                     x=data['Date'], y=dataSeasonal.resid, name="Residuals"), row=4, col=1)
 
-                fig.update_layout(width=1300, height=700)
+                fig.update_layout(width=1100, height=600)
                 production_plot.plotly_chart(fig)
+
+                with summary_statistics:
+                    summary_statistics.markdown('## Summary')
+                    summary_statistics.write('### Stationarity')
+
+                    original = data[plot_selectionVariable]
+                    trend = (dataSeasonal.trend).dropna()
+                    seasonal = (dataSeasonal.seasonal).dropna()
+                    residual = (dataSeasonal.resid).dropna()
+
+                    adftest_original = adfuller(original)
+                    adftest_trend = adfuller(trend)
+                    adftest_seasonal = adfuller(seasonal)
+                    adftest_resid = adfuller(residual)
+
+                    summary_statistics.write('Dickey-Fuller Test (P-value): ')
+                    summary_statistics.write(
+                        'Original: ' + str(adftest_original[1]))
+                    summary_statistics.write(
+                        'Trend: ' + str(adftest_trend[1]))
+                    summary_statistics.write(
+                        'Seasonal: ' + str(adftest_seasonal[1]))
+                    summary_statistics.write(
+                        'Resid: ' + str(adftest_resid[1]))
+
+                    if adftest_original[1] < 0.05:
+                        summary_statistics.markdown(
+                            f'<p style="color:#008000">The series is likely stationary.</p>', unsafe_allow_html=True)
+
+                        summary_statistics.write(
+                            'Low P-vale (lower than 0.05) implies series is stationary.')
+
+                    else:
+                        summary_statistics.markdown(
+                            f'<p style="color:#ff0000">The series is likely non-stationary.</p>', unsafe_allow_html=True)
+                        summary_statistics.write(
+                            'High P-vale (higher than 0.05) implies series is not stationary.')

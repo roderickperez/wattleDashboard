@@ -4,6 +4,7 @@ import streamlit as st
 import copy
 
 import pandas as pd
+import numpy as np
 # from prophet import Prophet
 # from prophet.diagnostics import cross_validation
 # from prophet.diagnostics import performance_metrics
@@ -76,7 +77,7 @@ def app():
     ##################################
 
     forecast_params, forecast_plot, output_forecast = st.beta_columns(
-        (1, 2, 1))
+        (1, 3, 1))
 
     with forecast_params:
 
@@ -189,14 +190,18 @@ def app():
 
                 forecastModels = ("Prophet", "ARIMA",
                                   "SARIMA", "Holt-Winters", "Theta", "Linear", "Quadratic")
-                selected_forecastModels = st.selectbox(
+                selected_forecastModels = forecast_params.selectbox(
                     "Select Forecast Model", forecastModels)
 
                 if selected_forecastModels == 'Prophet':
                     # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.prophet.html
+
+                    modelParametersExpander = forecast_params.beta_expander(
+                        'Parameters')
+
                     prophetSeasonality = ['Multiplicative', 'Additive']
 
-                    prophet_seasonality = st.radio(
+                    prophet_seasonality = modelParametersExpander.radio(
                         'Seasonal Model Type', prophetSeasonality)
 
                     prophet_seasonality = prophet_seasonality.lower()
@@ -209,14 +214,127 @@ def app():
 
                 elif selected_forecastModels == 'ARIMA':
                     # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.arima.html
-                    arima_p = st.slider(
-                        'p:', min_value=0, value=1, max_value=5)
 
-                    arima_d = st.slider(
-                        'd:', min_value=0, value=0, max_value=2)
+                    modelParametersExpander = forecast_params.beta_expander(
+                        'Parameters')
 
-                    arima_q = st.slider(
-                        'q:', min_value=0, value=1, max_value=5)
+                    forecastModel_Type = modelParametersExpander.radio(
+                        'Forecast Model Type', ['Manual', 'Automatic'])
+
+                    if forecastModel_Type == 'Manual':
+
+                        arima_p = modelParametersExpander.slider(
+                            'p:', min_value=0, value=1, max_value=5)
+
+                        arima_d = modelParametersExpander.slider(
+                            'd:', min_value=0, value=0, max_value=2)
+
+                        arima_q = modelParametersExpander.slider(
+                            'q:', min_value=0, value=1, max_value=5)
+
+                    elif forecastModel_Type == 'Automatic':
+                        arima_p = 1
+                        arima_d = 0
+                        arima_q = 1
+
+                        arima_p_range = modelParametersExpander.slider(
+                            'p:', min_value=0, value=[1, 3], max_value=5)
+
+                        arima_d_range = modelParametersExpander.slider(
+                            'd:', min_value=0, value=[1, 3], max_value=5)
+
+                        arima_q_range = modelParametersExpander.slider(
+                            'q:', min_value=0, value=[1, 3], max_value=5)
+
+                        parameters_grid_search = [
+                            {
+                                "name": "p",
+                                "type": "choice",
+                                "values": list(range(arima_p_range[0], arima_p_range[1])),
+                                "value_type": "int",
+                                "is_ordered": True,
+                            },
+                            {
+                                "name": "d",
+                                "type": "choice",
+                                "values": list(range(0, 1)),
+                                # "values": list(range(arima_d_range[0], arima_d_range[1])),
+                                "value_type": "int",
+                                "is_ordered": True,
+                            },
+                            {
+                                "name": "q",
+                                "type": "choice",
+                                "values": list(range(0, 1)),
+                                # "values": list(range(arima_q_range[0], arima_q_range[1])),
+                                "value_type": "int",
+                                "is_ordered": True,
+                            },
+                        ]
+
+                        parameter_tuner_grid = tpt.SearchMethodFactory.create_search_method(
+                            objective_name="evaluation_metric",
+                            parameters=parameters_grid_search,
+                            selected_search_method=SearchMethodEnum.GRID_SEARCH,
+                        )
+
+                        splitPercentage = modelParametersExpander.slider(
+                            'Split Percentage [%]:', min_value=0.0, value=80.0, max_value=100.0)
+
+                        split = int((splitPercentage/100)*len(data_df))
+
+                        train_ts = data_ts[0:split]
+                        test_ts = data_ts[split:]
+
+                        evaluationFunction = modelParametersExpander.radio(
+                            'Forecast Model Type', [
+                                'Mean Absolute Error (MAE)',
+                                'Mean Absolute Percentage Error (MAPE)',
+                                'Symmetric Mean Absolute Percentage Error (SMAPE)',
+                                'Mean Squared Error (MSE)',
+                                'Mean Absolute Scaled Error (MASE)',
+                                'Root Mean Squared Error (RMSE)'
+                            ])
+
+                        if evaluationFunction == 'Mean Absolute Error (MAE)':
+                            evaluationFunction = 'mae'
+                            # Fit an ARIMA model and calculate the MAE for the test data
+
+                            def evaluation_function(params):
+                                arima_params = ARIMAParams(
+                                    p=params['p'],
+                                    d=params['d'],
+                                    q=params['q']
+                                )
+                                model = ARIMAModel(train_ts, arima_params)
+                                model.fit()
+                                model_pred = model.predict(steps=len(test_ts))
+                                error = np.mean(
+                                    np.abs(model_pred['fcst'].values - test_ts.value.values))
+                                return error
+
+                        elif evaluationFunction == 'Mean Absolute Percentage Error (MAPE)':
+                            pass
+                        elif evaluationFunction == 'Symmetric Mean Absolute Percentage Error (SMAPE)':
+                            pass
+                        elif evaluationFunction == 'Mean Squared Error (MSE)':
+                            pass
+                        elif evaluationFunction == 'Mean Absolute Scaled Error (MASE)':
+                            pass
+                        elif evaluationFunction == 'Root Mean Squared Error (RMSE)':
+                            pass
+
+                        parameter_tuner_grid.generate_evaluate_new_parameter_values(
+                            evaluation_function=evaluation_function
+                        )
+
+                        parameter_tuning_results_grid = (
+                            parameter_tuner_grid.list_parameter_value_scores()
+                        )
+
+                        # Retrieve parameter tuning results
+
+                        st.write(parameter_tuning_results_grid)
 
                     params = ARIMAParams(
                         p=arima_p,
@@ -527,7 +645,28 @@ def app():
                           line_dash="dash", line_color="black", row=1, col=1)
 
             # fig.update_layout(width=1300, height=700)
-            fig.update_layout(showlegend=False)
+
+            fig.update_layout(legend=dict(
+                orientation="h",
+                #     yanchor="bottom",
+                #     yanchor="top",
+                #     y=0.99,
+                #     xanchor="right",
+                #     x=0.01
+            ),
+                # showlegend=False,
+                autosize=True,
+                width=1000,
+                #   height=500,
+                margin=dict(
+                l=0,
+                r=0,
+                b=0,
+                t=0,
+                pad=0
+            ))
+            fig.update_xaxes(automargin=False)
+            fig.update_yaxes(automargin=False)
 
             forecast_plot.plotly_chart(fig)
 
@@ -581,8 +720,8 @@ def app():
                 #     x=0.01
             ),
                 # showlegend=False,
-                autosize=False,
-                #   width=500,
+                autosize=True,
+                width=1000,
                 #   height=500,
                 margin=dict(
                 l=0,
@@ -591,8 +730,8 @@ def app():
                 t=0,
                 pad=0
             ))
-            fig.update_xaxes(automargin=True)
-            fig.update_yaxes(automargin=True)
+            fig.update_xaxes(automargin=False)
+            fig.update_yaxes(automargin=False)
 
             forecast_plot.plotly_chart(fig)
 
@@ -603,4 +742,4 @@ def app():
             resultsExpander.write(fcst)
 
     with output_forecast:
-        pass
+        output_forecast.markdown('#### Results')
