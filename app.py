@@ -5,6 +5,7 @@ from multiapp import MultiApp
 from apps import home, productionEDA, declinationCurve, MLforecast2, economics, viewer
 from PIL import Image
 
+
 st.set_page_config(
     page_title="VMM-1 | Wattle",
     page_icon="🛢️",

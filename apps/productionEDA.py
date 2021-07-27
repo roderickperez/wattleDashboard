@@ -1,7 +1,11 @@
 import streamlit as st
+import copy
 import numpy as np
 from plotly.subplots import make_subplots
 from statsmodels.tsa.seasonal import seasonal_decompose
+from sklearn.metrics import mean_squared_error
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.stattools import pacf, acf
 import statsmodels.api as sm
 from statsmodels.tsa.stattools import adfuller
 import pandas as pd
@@ -305,6 +309,7 @@ def app():
                     'Note: Zero values were replaced by NAN.')
 
             with summary_statistics:
+
                 summary_statistics.markdown('## Summary')
                 summaryExpander = summary_statistics.beta_expander(
                     'Statistics')
@@ -330,32 +335,34 @@ def app():
 
             if (plot_Type == 'Full'):
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=data[plot_selectionVariable]))
-                fig.layout.update(xaxis_rangeslider_visible=True)
+                with production_plot:
 
-                fig.update_layout(legend=dict(
-                    orientation="h",
-                    #     yanchor="bottom",
-                    #     yanchor="top",
-                    #     y=0.99,
-                    #     xanchor="right",
-                    #     x=0.01
-                ),
-                    # showlegend=False,
-                    autosize=True,
-                    width=1150,
-                    height=650,
-                    margin=dict(
-                    l=50,
-                    r=0,
-                    b=0,
-                    t=0,
-                    pad=0
-                ))
-                fig.update_yaxes(automargin=False)
-                production_plot.plotly_chart(fig)
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=data[plot_selectionVariable]))
+                    fig.layout.update(xaxis_rangeslider_visible=True)
+
+                    fig.update_layout(legend=dict(
+                        orientation="h",
+                        #     yanchor="bottom",
+                        #     yanchor="top",
+                        #     y=0.99,
+                        #     xanchor="right",
+                        #     x=0.01
+                    ),
+                        # showlegend=False,
+                        autosize=True,
+                        width=1150,
+                        height=650,
+                        margin=dict(
+                        l=50,
+                        r=0,
+                        b=0,
+                        t=0,
+                        pad=0
+                    ))
+                    fig.update_yaxes(automargin=False)
+                    production_plot.plotly_chart(fig)
 
                 with summary_statistics:
                     summary_statistics.markdown('## Summary')
@@ -372,7 +379,7 @@ def app():
                     'Seasonal Model Type', seasonalModelType)
 
                 production_params_checkbox = production_params.radio(
-                    'Seasonality Periods: ', ['Daily', 'Monthly', 'Yearly', 'Custom'])
+                    'Seasonality Periods: ', ['Daily', 'Monthly', 'Yearly', 'Custom'], index=1)
 
                 if (production_params_checkbox == 'Daily'):
                     seasonalityPeriod = 1
@@ -387,39 +394,41 @@ def app():
                 dataSeasonal = seasonal_decompose(
                     data[plot_selectionVariable], model=seasonalModel_Type, period=seasonalityPeriod)
 
-                fig = make_subplots(
-                    rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.02)
+                with production_plot:
 
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=data[plot_selectionVariable], name="Observed"), row=1, col=1)
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=dataSeasonal.trend, name="Trend"), row=2, col=1)
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=dataSeasonal.seasonal, name="Seasonal"), row=3, col=1)
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=dataSeasonal.resid, name="Residuals"), row=4, col=1)
+                    fig = make_subplots(
+                        rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.02)
 
-                fig.update_layout(legend=dict(
-                    orientation="h",
-                    #     yanchor="bottom",
-                    #     yanchor="top",
-                    #     y=0.99,
-                    #     xanchor="right",
-                    #     x=0.01
-                ),
-                    # showlegend=False,
-                    autosize=True,
-                    width=1150,
-                    height=650,
-                    margin=dict(
-                    l=50,
-                    r=0,
-                    b=0,
-                    t=0,
-                    pad=0
-                ))
-                fig.update_yaxes(automargin=False)
-                production_plot.plotly_chart(fig)
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=data[plot_selectionVariable], name="Observed"), row=1, col=1)
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=dataSeasonal.trend, name="Trend"), row=2, col=1)
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=dataSeasonal.seasonal, name="Seasonal"), row=3, col=1)
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=dataSeasonal.resid, name="Residuals"), row=4, col=1)
+
+                    fig.update_layout(legend=dict(
+                        orientation="h",
+                        #     yanchor="bottom",
+                        #     yanchor="top",
+                        #     y=0.99,
+                        #     xanchor="right",
+                        #     x=0.01
+                    ),
+                        # showlegend=False,
+                        autosize=True,
+                        width=1150,
+                        height=650,
+                        margin=dict(
+                        l=50,
+                        r=0,
+                        b=0,
+                        t=0,
+                        pad=0
+                    ))
+                    fig.update_yaxes(automargin=False)
+                    production_plot.plotly_chart(fig)
 
                 #################################
 
@@ -477,13 +486,277 @@ def app():
                     'Model', customModelType)
 
                 if customModel_Type == 'ARIMA':
-                    ARIMAModel_Type = production_params.radio(
-                        'Model', ['Manual', 'Auto'])
 
-                    if (ARIMAModel_Type == 'Manual'):
-                        pass
-                    elif (ARIMAModel_Type == 'Auto'):
-                        pass
+                    ARIMAModelType = production_params.radio(
+                        'ARIMA Model', ['Analysis', 'Seach Parameters'])
+
+                    if ARIMAModelType == 'Analysis':
+
+                        ARIMAPlot = production_params.radio(
+                            'ARIMA Plot', ['Autocorrelation Plots', 'Prediction'])
+
+                        # summary_statistics.write(pred_y)
+
+                        # Calculate the Auto-Regressive Integrated Moving Average
+                        data_df = copy.deepcopy(data)
+
+                        data_ts = pd.concat(
+                            [data_df['Date'], data_df[plot_selectionVariable]], axis=1)
+
+                        ARIMAModelParameters = st.beta_expander(
+                            'ARIMA Parameters')
+
+                        lags = ARIMAModelParameters.slider(
+                            'Lags:', min_value=0, value=100, max_value=1000, help='Lags to be considered in the model')
+
+                        alpha = ARIMAModelParameters.slider(
+                            'Alpha (%):', min_value=0.00, value=0.05, max_value=1.00, help='The confidence level of the forecast')
+
+                        train_perc = ARIMAModelParameters.slider(
+                            'Training %:', min_value=0.0, value=0.8, max_value=1.0, help='Percentage of data to be used for training')
+
+                        data_df_train = data_ts[0:int(
+                            len(data_df) * train_perc)]
+                        data_df_test = data_ts[int(len(data_df) * train_perc):]
+
+                        arima_p = ARIMAModelParameters.slider(
+                            'p:', min_value=0, value=0, max_value=lags)
+
+                        arima_d = ARIMAModelParameters.slider(
+                            'd:', min_value=0, value=0, max_value=2)
+
+                        arima_q = ARIMAModelParameters.slider(
+                            'q:', min_value=0, value=0, max_value=lags)
+
+                        ARIMA_model = ARIMA(data_df_train[plot_selectionVariable], order=(
+                            arima_p, arima_d, arima_q))
+
+                        ARIMA_model_fit = ARIMA_model.fit()
+
+                        fcst = ARIMA_model_fit.forecast(
+                            steps=len(data_df_test))[0]
+
+                        if ARIMAPlot == 'Autocorrelation Plots':
+
+                            with production_plot:
+                                fig = make_subplots(
+                                    rows=1, cols=2, subplot_titles=("Partial Autocorrelation (PACF)", "Autocorrelation (ACF)"))
+
+                                df_pacf = pacf(
+                                    data_df[plot_selectionVariable], nlags=lags, alpha=alpha)
+                                df_acf = acf(
+                                    data_df[plot_selectionVariable], nlags=lags, alpha=alpha)
+
+                                df_pacf_lower_y = df_pacf[1][:, 0] - df_pacf[0]
+                                df_pacf_upper_y = df_pacf[1][:, 1] - df_pacf[0]
+
+                                df_acf_lower_y = df_acf[1][:, 0] - df_acf[0]
+                                df_acf_upper_y = df_acf[1][:, 1] - df_acf[0]
+
+                                #####################
+
+                                [fig.add_scatter(x=(x, x), y=(0, df_pacf[0][x]), row=1, col=1, mode='lines', line_color='#3f3f3f')
+                                    for x in range(len(df_pacf[0]))]
+
+                                fig.add_scatter(x=np.arange(len(df_pacf[0])), y=df_pacf[0], mode='markers', marker_color='#1f77b4',
+                                                marker_size=12, row=1, col=1)
+
+                                fig.add_scatter(x=np.arange(len(
+                                    df_pacf[0])), y=df_pacf_upper_y, mode='lines', line_color='rgba(255,255,255,0)', row=1, col=1)
+                                fig.add_scatter(x=np.arange(len(df_pacf[0])), y=df_pacf_lower_y, mode='lines', fillcolor='rgba(32, 146, 230,0.3)',
+                                                fill='tonexty', line_color='rgba(255,255,255,0)', row=1, col=1)
+
+                                fig.add_vline(x=arima_p,  line_width=1, row=1, col=1,
+                                              line_dash="dash", line_color="red")
+
+                                fig.update_layout(showlegend=False,
+                                                  autosize=True,
+                                                  width=1000,
+                                                  height=700,
+                                                  xaxis_title="Lag",
+                                                  yaxis_title="Partial Autocorrelation",
+                                                  )
+
+                                #####################
+
+                                [fig.add_scatter(x=(x, x), y=(0, df_acf[0][x]), row=1, col=2, mode='lines', line_color='#3f3f3f')
+                                    for x in range(len(df_pacf[0]))]
+
+                                fig.add_scatter(x=np.arange(len(df_acf[0])), y=df_acf[0], mode='markers', marker_color='#1f77b4',
+                                                marker_size=12, row=1, col=2)
+
+                                fig.add_scatter(x=np.arange(len(
+                                    df_acf[0])), y=df_acf_upper_y, mode='lines', line_color='rgba(255,255,255,0)', row=1, col=2)
+                                fig.add_scatter(x=np.arange(len(df_acf[0])), y=df_acf_lower_y, mode='lines', fillcolor='rgba(32, 146, 230,0.3)',
+                                                fill='tonexty', line_color='rgba(255,255,255,0)', row=1, col=2)
+
+                                fig.add_vline(x=arima_q,  line_width=1, row=1, col=2,
+                                              line_dash="dash", line_color="red")
+
+                                fig.update_layout(showlegend=False,
+                                                  autosize=True,
+                                                  width=1100,
+                                                  height=700,
+                                                  xaxis_title="Lag",
+                                                  yaxis_title="Autocorrelation",
+                                                  )
+
+                                fig['layout']['xaxis']['title'] = 'Lags'
+                                fig['layout']['xaxis2']['title'] = 'Lags'
+                                fig['layout']['yaxis']['title'] = 'Partial Autocorrelation'
+                                fig['layout']['yaxis2']['title'] = 'Autocorrelation'
+
+                                production_plot.plotly_chart(fig)
+
+                        elif ARIMAPlot == 'Prediction':
+
+                            with production_plot:
+                                fig = go.Figure()
+                                fig.add_trace(go.Scatter(
+                                    x=data_df['Date'], y=data_df[plot_selectionVariable], name=plot_selectionVariable))
+                                fig.layout.update(
+                                    xaxis_rangeslider_visible=True)
+
+                                fig.update_layout(legend=dict(
+                                    orientation="h",
+                                    #     yanchor="bottom",
+                                    #     yanchor="top",
+                                    #     y=0.99,
+                                    #     xanchor="right",
+                                    #     x=0.01
+                                ),
+                                    showlegend=True,
+                                    autosize=True,
+                                    width=1150,
+                                    height=650,
+                                    margin=dict(
+                                    l=50,
+                                    r=0,
+                                    b=0,
+                                    t=0,
+                                    pad=0
+                                ))
+                                fig.update_yaxes(automargin=False)
+                                production_plot.plotly_chart(fig)
+
+                        with summary_statistics:
+                            summary_statistics.markdown('## Parameters')
+                            ARIMAModelSummary = summary_statistics.beta_expander(
+                                'ARIMA Model Summary')
+                            ARIMAModelSummary.write(ARIMA_model_fit.summary())
+
+                            ARIMA_error = np.sqrt(mean_squared_error(
+                                data_df_test[plot_selectionVariable], fcst))
+
+                            st.markdown("<hr/>", unsafe_allow_html=True)
+
+                            summary_statistics.markdown(
+                                f"#### Akaike Information Critera (AIC)")
+
+                            AIC = round(ARIMA_model_fit.aic, 2)
+
+                            AIC_ = f"{AIC:,}"
+
+                            summary_statistics.markdown(
+                                f"<h1 style = 'text-align: center; color: black;'>{AIC_}</h1>", unsafe_allow_html=True)
+
+                            st.markdown("<hr/>", unsafe_allow_html=True)
+
+                            summary_statistics.markdown(
+                                f"#### ARIMA Model Error")
+
+                            ARIMA_error_ = round(ARIMA_error, 2)
+
+                            ARIMA_error_ = f"{ARIMA_error_:,}"
+
+                            summary_statistics.markdown(
+                                f"<h1 style = 'text-align: center; color: black;'>{ARIMA_error_}</h1>", unsafe_allow_html=True)
+
+                            st.markdown("<hr/>", unsafe_allow_html=True)
+
+                            summary_statistics.write(
+                                'Total samples: ' + (str(len(data_df))))
+                            summary_statistics.write(
+                                'Training samples ' + (str(len(data_df_train))))
+                            summary_statistics.write(
+                                'Testing samples: ' + (str(len(data_df_test))))
+
+                    elif ARIMAModelType == 'Seach Parameters':
+
+                        # Calculate the Auto-Regressive Integrated Moving Average
+                        data_df = copy.deepcopy(data)
+
+                        data_ts = pd.concat(
+                            [data_df['Date'], data_df[plot_selectionVariable]], axis=1)
+
+                        ARIMAModelParameters = st.beta_expander(
+                            'ARIMA Parameters')
+
+                        lags = ARIMAModelParameters.slider(
+                            'Lags:', min_value=0, value=100, max_value=1000, help='Lags to be considered in the model')
+
+                        alpha = ARIMAModelParameters.slider(
+                            'Alpha (%):', min_value=0.00, value=0.05, max_value=1.00, help='The confidence level of the forecast')
+
+                        train_perc = ARIMAModelParameters.slider(
+                            'Training %:', min_value=0.0, value=0.8, max_value=1.0, help='Percentage of data to be used for training')
+
+                        # data_df_train = data_ts[0:int(
+                        #     len(data_df) * train_perc)]
+                        # data_df_test = data_ts[int(len(data_df) * train_perc):]
+
+                        arima_p = ARIMAModelParameters.slider(
+                            'p:', min_value=0, value=[0, 1], max_value=lags)
+
+                        arima_d = ARIMAModelParameters.slider(
+                            'd:', min_value=0, value=[0, 1], max_value=2)
+
+                        arima_q = ARIMAModelParameters.slider(
+                            'q:', min_value=0, value=[0, 1], max_value=lags)
+
+                        p_values = range(arima_p[0], arima_p[1])
+                        d_values = range(arima_d[0], arima_d[1])
+                        q_values = range(arima_q[0], arima_q[1])
+
+                        # with production_plot:
+
+                        with summary_statistics:
+
+                            summary_statistics.markdown(
+                                '## Parameters')
+                            summary_statistics.markdown(
+                                '#### ARIMA Error Table')
+
+                            for p in p_values:
+                                for d in d_values:
+                                    for q in q_values:
+                                        order = (p, d, q)
+                                        data_df_train, data_df_test = data_ts[0:int(
+                                            len(data_df) * train_perc)], data_ts[int(len(data_df) * train_perc):]
+                                        predictions = list()
+                                        for i in range(len(data_df_test)):
+                                            try:
+                                                model = ARIMA(
+                                                    data_df_train[plot_selectionVariable], order=order)
+                                                model_fit = model.fit(disp=0)
+                                                pred_y = model_fit.forecast()[
+                                                    0]
+                                                predictions.append(pred_y)
+
+                                                # summary_statistics.write(
+                                                #     predictions)
+                                                error = mean_squared_error(
+                                                    data_df_test, predictions)
+
+                                                summary_statistics.write(
+                                                    f'ARIMA%s MSE = %.2f' % (order, error))
+                                            except:
+                                                continue
+
+                        # with summary_statistics:
+                        #     summary_statistics.write(data_df_train)
+                        #     summary_statistics.write(data_df_test)
+                        #     summary_statistics.write(predictions)
 
                 elif customModel_Type == 'Moving Average':
 
@@ -496,32 +769,37 @@ def app():
                     data['MovAverage'] = data[plot_selectionVariable].rolling(
                         window=customModel_period).mean()
 
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=data['Date'], y=data[plot_selectionVariable], name="Observed"))
+                    with production_plot:
 
-                    fig.add_trace(go.Scatter(
-                        x=data['Date'], y=data['MovAverage'], name="Moving Average"))
-                    fig.layout.update(xaxis_rangeslider_visible=True)
+                        fig = go.Figure()
+                        fig.add_trace(go.Scatter(
+                            x=data['Date'], y=data[plot_selectionVariable], name="Observed"))
 
-                    fig.update_layout(legend=dict(
-                        orientation="h",
-                        #     yanchor="bottom",
-                        #     yanchor="top",
-                        #     y=0.99,
-                        #     xanchor="right",
-                        #     x=0.01
-                    ),
-                        # showlegend=False,
-                        autosize=True,
-                        width=1150,
-                        height=650,
-                        margin=dict(
-                        l=50,
-                        r=0,
-                        b=0,
-                        t=0,
-                        pad=0
-                    ))
-                    fig.update_yaxes(automargin=False)
-                    production_plot.plotly_chart(fig)
+                        fig.add_trace(go.Scatter(
+                            x=data['Date'], y=data['MovAverage'], name="Moving Average"))
+                        fig.layout.update(xaxis_rangeslider_visible=True)
+
+                        # fig.add_vline(x=economicLimit,  line_width=1,
+                        #   line_dash="dash", line_color="black")
+
+                        fig.update_layout(legend=dict(
+                            orientation="h",
+                            #     yanchor="bottom",
+                            #     yanchor="top",
+                            #     y=0.99,
+                            #     xanchor="right",
+                            #     x=0.01
+                        ),
+                            # showlegend=False,
+                            autosize=True,
+                            width=1150,
+                            height=650,
+                            margin=dict(
+                            l=50,
+                            r=0,
+                            b=0,
+                            t=0,
+                            pad=0
+                        ))
+                        fig.update_yaxes(automargin=False)
+                        production_plot.plotly_chart(fig)
