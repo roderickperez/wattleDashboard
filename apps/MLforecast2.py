@@ -81,7 +81,7 @@ def app():
 
     with forecast_params:
 
-        forecast_params.markdown('#### Parameters')
+        forecast_params.markdown('## Parameters')
 
         economicParameters = forecast_params.beta_expander('Economic')
 
@@ -665,7 +665,6 @@ def app():
                 t=0,
                 pad=0
             ))
-            fig.update_xaxes(automargin=False)
             fig.update_yaxes(automargin=False)
 
             forecast_plot.plotly_chart(fig)
@@ -742,4 +741,4 @@ def app():
             resultsExpander.write(fcst)
 
     with output_forecast:
-        output_forecast.markdown('#### Results')
+        output_forecast.markdown('## Results')

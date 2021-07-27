@@ -71,8 +71,6 @@ def app():
             if (plot_Type == 'Scatter'):
 
                 with production_plot:
-                    production_plot.markdown('## Plot')
-                    production_plot.markdown('### Scatter')
 
                     scatterType = ['All', 'Individual']
 
@@ -102,12 +100,27 @@ def app():
                             x=data_laEstancia_1H['Date'], y=data_laEstancia_1H[plot_selectionVariable], name="La Estancia-1H"))
                         fig.layout.update(xaxis_rangeslider_visible=True)
 
-                        fig.update_layout(width=1100, height=700)
+                        fig.update_layout(legend=dict(
+                            orientation="h",
+                            #     yanchor="bottom",
+                            #     yanchor="top",
+                            #     y=0.99,
+                            #     xanchor="right",
+                            #     x=0.01
+                        ),
+                            # showlegend=False,
+                            autosize=True,
+                            width=1150,
+                            height=650,
+                            margin=dict(
+                            l=0,
+                            r=0,
+                            b=0,
+                            t=0,
+                            pad=0
+                        ))
+                        fig.update_yaxes(automargin=False)
                         production_plot.plotly_chart(fig)
-
-                        with summary_statistics:
-                            summary_statistics.markdown('## Summary')
-                            summary_statistics.write('Marico el que lo lea')
 
                     else:
                         fig = make_subplots(
@@ -128,17 +141,29 @@ def app():
                         fig.add_trace(go.Scatter(
                             x=data_laEstancia_1H['Date'], y=data_laEstancia_1H[plot_selectionVariable], name="La Estancia-1H"), row=5, col=1)
 
-                        fig.update_layout(width=1100, height=700)
+                        fig.update_layout(legend=dict(
+                            orientation="h",
+                            #     yanchor="bottom",
+                            #     yanchor="top",
+                            #     y=0.99,
+                            #     xanchor="right",
+                            #     x=0.01
+                        ),
+                            # showlegend=False,
+                            autosize=True,
+                            width=1150,
+                            height=650,
+                            margin=dict(
+                            l=0,
+                            r=0,
+                            b=0,
+                            t=0,
+                            pad=0
+                        ))
+                        fig.update_yaxes(automargin=False)
                         production_plot.plotly_chart(fig)
 
-                        with summary_statistics:
-                            summary_statistics.markdown('## Summary')
-                            summary_statistics.write('Marico el que lo lea')
-
             elif (plot_Type == 'Boxplot'):
-
-                production_plot.markdown('## Plot')
-                production_plot.markdown('### Boxplot')
 
                 fig = go.Figure()
                 fig.add_trace(go.Box(
@@ -156,24 +181,33 @@ def app():
                 fig.add_trace(go.Box(
                     y=data_laEstancia_1H[plot_selectionVariable], name="La Estancia-1H"))
 
-                fig.update_layout(width=1100, height=700)
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1150,
+                    height=650,
+                    margin=dict(
+                    l=0,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
                 production_plot.plotly_chart(fig)
 
-                with summary_statistics:
-                    summary_statistics.markdown('## Summary')
-                    summary_statistics.write('Marico el que lo lea')
-
             elif (plot_Type == 'Hist'):
-
-                production_plot.markdown('## Plot')
-                production_plot.markdown('### Histogram')
 
                 histMode = ['overlay', 'stack', 'normal']
 
                 hist_Mode = production_params.radio('Histogram Mode', histMode)
-
-                histOpacity = production_params.slider('Opacity:',
-                                                       min_value=0.0, value=0.5, max_value=1.0)
 
                 fig = go.Figure()
                 fig.add_trace(go.Histogram(
@@ -193,28 +227,91 @@ def app():
 
                 if (hist_Mode == 'overlay'):
 
-                    fig.update_layout(barmode=hist_Mode,
-                                      width=1100, height=630)
+                    histOpacity = production_params.slider('Opacity:',
+                                                           min_value=0.0, value=0.5, max_value=1.0)
+
                     fig.update_traces(opacity=histOpacity)
+                    fig.update_layout(barmode=hist_Mode,
+                                      legend=dict(
+                                          orientation="h",
+                                          #     yanchor="bottom",
+                                          #     yanchor="top",
+                                          #     y=0.99,
+                                          #     xanchor="right",
+                                          #     x=0.01
+                                      ),
+                                      # showlegend=False,
+                                      autosize=True,
+                                      width=1150,
+                                      height=650,
+                                      margin=dict(
+                                          l=50,
+                                          r=0,
+                                          b=0,
+                                          t=0,
+                                          pad=0
+                                      ))
+                    fig.update_yaxes(automargin=False)
                     production_plot.plotly_chart(fig)
 
                 elif (hist_Mode == 'stack'):
                     fig.update_layout(barmode=hist_Mode,
-                                      width=1100, height=630)
+                                      legend=dict(
+                                          orientation="h",
+                                          #     yanchor="bottom",
+                                          #     yanchor="top",
+                                          #     y=0.99,
+                                          #     xanchor="right",
+                                          #     x=0.01
+                                      ),
+                                      # showlegend=False,
+                                      autosize=True,
+                                      width=1150,
+                                      height=650,
+                                      margin=dict(
+                                          l=50,
+                                          r=0,
+                                          b=0,
+                                          t=0,
+                                          pad=0
+                                      ))
+                    fig.update_yaxes(automargin=False)
                     production_plot.plotly_chart(fig)
 
                 else:
-                    fig.update_layout(width=1100, height=630)
+                    fig.update_layout(legend=dict(
+                        orientation="h",
+                        #     yanchor="bottom",
+                        #     yanchor="top",
+                        #     y=0.99,
+                        #     xanchor="right",
+                        #     x=0.01
+                    ),
+                        # showlegend=False,
+                        autosize=True,
+                        width=1150,
+                        height=650,
+                        margin=dict(
+                        l=50,
+                        r=0,
+                        b=0,
+                            t=0,
+                            pad=0
+                    ))
+                    fig.update_yaxes(automargin=False)
                     production_plot.plotly_chart(fig)
 
                 production_plot.write(
                     'Note: Zero values were replaced by NAN.')
 
-                with summary_statistics:
-                    summary_statistics.markdown('## Summary')
-                    summary_statistics.write('Marico el que lo lea')
+            with summary_statistics:
+                summary_statistics.markdown('## Summary')
+                summaryExpander = summary_statistics.beta_expander(
+                    'Statistics')
+                summaryExpander.write(
+                    data[plot_selectionVariable].describe())
 
-        else:
+        elif (modeType == 'Single Well'):
             wells = ("Caramelo-2", "Caramelo-3", "Toposi-1",
                      "Toposi-2H", "LaEstancia-1H")
 
@@ -227,29 +324,47 @@ def app():
             plot_selectionVariable = production_params.selectbox(
                 'Feature:', columns)
 
-            plotType = ['Full', 'Decomposition']
+            plotType = ['Full', 'Decomposition', 'Custom']
 
             plot_Type = production_params.radio('Plot Type', plotType)
 
             if (plot_Type == 'Full'):
-                production_plot.markdown('## Plot')
-                production_plot.markdown('### Scatter | Full')
 
                 fig = go.Figure()
                 fig.add_trace(go.Scatter(
                     x=data['Date'], y=data[plot_selectionVariable]))
                 fig.layout.update(xaxis_rangeslider_visible=True)
 
-                fig.update_layout(width=1100, height=700)
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1150,
+                    height=650,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
                 production_plot.plotly_chart(fig)
 
                 with summary_statistics:
                     summary_statistics.markdown('## Summary')
-                    summary_statistics.write('Marico el que lo lea')
+                    summaryExpander = summary_statistics.beta_expander(
+                        'Statistics')
+                    summaryExpander.write(
+                        data[plot_selectionVariable].describe())
 
-            else:
-                production_plot.markdown('## Plot')
-                production_plot.markdown('### Scatter | Decomposition')
+            elif (plot_Type == 'Decomposition'):
 
                 seasonalModelType = ['additive', 'multiplicative']
 
@@ -260,17 +375,17 @@ def app():
                     'Seasonality Periods: ', ['Daily', 'Monthly', 'Yearly', 'Custom'])
 
                 if (production_params_checkbox == 'Daily'):
-                    seanalityPeriod = 1
+                    seasonalityPeriod = 1
                 elif (production_params_checkbox == 'Monthly'):
-                    seanalityPeriod = 30
+                    seasonalityPeriod = 30
                 elif (production_params_checkbox == 'Yearly'):
-                    seanalityPeriod = 365
+                    seasonalityPeriod = 365
                 else:
-                    seanalityPeriod = production_params.slider('Period:',
-                                                               min_value=1, value=30, max_value=365)
+                    seasonalityPeriod = production_params.slider('Period:',
+                                                                 min_value=1, value=30, max_value=365)
 
                 dataSeasonal = seasonal_decompose(
-                    data[plot_selectionVariable], model=seasonalModel_Type, period=seanalityPeriod)
+                    data[plot_selectionVariable], model=seasonalModel_Type, period=seasonalityPeriod)
 
                 fig = make_subplots(
                     rows=4, cols=1, shared_xaxes=True, vertical_spacing=0.02)
@@ -284,12 +399,41 @@ def app():
                 fig.add_trace(go.Scatter(
                     x=data['Date'], y=dataSeasonal.resid, name="Residuals"), row=4, col=1)
 
-                fig.update_layout(width=1100, height=600)
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1150,
+                    height=650,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
                 production_plot.plotly_chart(fig)
+
+                #################################
 
                 with summary_statistics:
                     summary_statistics.markdown('## Summary')
                     summary_statistics.write('### Stationarity')
+
+                    summaryExpander = summary_statistics.beta_expander(
+                        'Statistics')
+                    summaryExpander.write(
+                        data[plot_selectionVariable].describe())
+
+                    stationarityExpander = summary_statistics.beta_expander(
+                        'Stationarity')
 
                     original = data[plot_selectionVariable]
                     trend = (dataSeasonal.trend).dropna()
@@ -301,25 +445,68 @@ def app():
                     adftest_seasonal = adfuller(seasonal)
                     adftest_resid = adfuller(residual)
 
-                    summary_statistics.write('Dickey-Fuller Test (P-value): ')
-                    summary_statistics.write(
-                        'Original: ' + str(adftest_original[1]))
-                    summary_statistics.write(
-                        'Trend: ' + str(adftest_trend[1]))
-                    summary_statistics.write(
-                        'Seasonal: ' + str(adftest_seasonal[1]))
-                    summary_statistics.write(
-                        'Resid: ' + str(adftest_resid[1]))
+                    stationarityExpander.write(
+                        'Dickey-Fuller Test (P-value): ')
+                    stationarityExpander.write(
+                        'Original: ' + str(round(adftest_original[1], 5)))
+                    stationarityExpander.write(
+                        'Trend: ' + str(round(adftest_trend[1], 5)))
+                    stationarityExpander.write(
+                        'Seasonal: ' + str(round(adftest_seasonal[1], 5)))
+                    stationarityExpander.write(
+                        'Resid: ' + str(round(adftest_resid[1], 5)))
 
                     if adftest_original[1] < 0.05:
-                        summary_statistics.markdown(
+                        stationarityExpander.markdown(
                             f'<p style="color:#008000">The series is likely stationary.</p>', unsafe_allow_html=True)
 
-                        summary_statistics.write(
+                        stationarityExpander.write(
                             'Low P-vale (lower than 0.05) implies series is stationary.')
 
                     else:
-                        summary_statistics.markdown(
+                        stationarityExpander.markdown(
                             f'<p style="color:#ff0000">The series is likely non-stationary.</p>', unsafe_allow_html=True)
-                        summary_statistics.write(
+                        stationarityExpander.write(
                             'High P-vale (higher than 0.05) implies series is not stationary.')
+
+            elif (plot_Type == 'Custom'):
+                customModelType = ['Moving Average']
+
+                customModel_Type = production_params.radio(
+                    'Seasonal Model Type', customModelType)
+
+                customModel_period = production_params.slider('Period:',
+                                                              min_value=1, value=30, max_value=365)
+
+                data['MovAverage'] = data[plot_selectionVariable].rolling(
+                    window=customModel_period).mean()
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=data['Date'], y=data[plot_selectionVariable], name="Observed"))
+
+                fig.add_trace(go.Scatter(
+                    x=data['Date'], y=data['MovAverage'], name="Moving Average"))
+                fig.layout.update(xaxis_rangeslider_visible=True)
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1150,
+                    height=650,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+                production_plot.plotly_chart(fig)
