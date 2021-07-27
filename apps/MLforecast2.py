@@ -5,6 +5,9 @@ import copy
 
 import pandas as pd
 import numpy as np
+from sklearn.metrics import mean_squared_error
+from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.stattools import pacf, acf
 # from prophet import Prophet
 # from prophet.diagnostics import cross_validation
 # from prophet.diagnostics import performance_metrics
@@ -164,12 +167,65 @@ def app():
             predictionPeriod = forecastParameters.slider(
                 'Period (days):', min_value=1, value=1825, max_value=3650)
 
-            forecastModelType = ['Univariate', 'Ensamble', 'Bi-variate']
+            forecastModelType = [
+                'Manual', 'Univariate', 'Ensamble', 'Bi-variate']
 
             forecastModel_Type = forecast_params.radio(
                 'Forecast Model Type', forecastModelType)
 
-            if forecastModel_Type == 'Univariate':
+            modelParametersExpander = forecast_params.beta_expander(
+                'Parameters')
+
+            if forecastModel_Type == 'Manual':
+
+                # Data Preparation
+
+                data = load_data()
+
+                data_df = copy.deepcopy(data)
+
+                data_df.rename(
+                    {'Date': 'time', 'Gas Production [Kcfd]': 'production'}, axis=1, inplace=True)
+
+                ##################################
+
+                forecastModels = ("Naive", "ARIMA")
+                selected_forecastModels = forecast_params.selectbox(
+                    "Select Forecast Model", forecastModels)
+
+                if selected_forecastModels == 'Naive':
+                    # convert to TimeSeriesData object
+
+                    shift = modelParametersExpander.slider(
+                        'Shift:', min_value=0, value=1, max_value=365)
+
+                    data_ts = pd.concat(
+                        [data_df['production'], data_df['production'].shift(shift)], axis=1)
+
+                    data_ts.columns = ['original', 'forecast']
+                    data_ts.dropna(inplace=True)
+
+                    # fcst = data_df['time']
+
+                    fcst = pd.concat(
+                        [data_df['time'], data_ts['forecast']], axis=1)
+
+                    fcst.columns = ['time', 'fcst']
+
+                    fcst['date'] = pd.to_datetime(fcst['time']).dt.date
+
+                    fcst.dropna(inplace=True)
+
+                    forecast_error = mean_squared_error(
+                        data_ts.original, fcst.fcst)
+
+                elif selected_forecastModels == 'ARIMA':
+                    # Calculate the Auto-Regressive Integrated Moving Average
+
+                    # plot_acf(data_df)
+                    pass
+
+            elif forecastModel_Type == 'Univariate':
 
                 ##################################
 
@@ -214,9 +270,6 @@ def app():
 
                 elif selected_forecastModels == 'ARIMA':
                     # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.arima.html
-
-                    modelParametersExpander = forecast_params.beta_expander(
-                        'Parameters')
 
                     forecastModel_Type = modelParametersExpander.radio(
                         'Forecast Model Type', ['Manual', 'Automatic'])
@@ -608,7 +661,52 @@ def app():
 
         fig = go.Figure()
 
-        if forecastModel_Type == 'Bi-variate':
+        if forecastModel_Type == 'Manual':
+
+            if selected_forecastModels == 'Naive':
+                fig.add_trace(go.Scatter(
+                    x=data_df['date'], y=data_df['production'], name='Production'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['date'], y=fcst['fcst'], name='Forecast'))
+
+                fig.layout.update(xaxis_rangeslider_visible=True)
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    #   height=500,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                resultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result Table')
+
+                resultsExpander.write(fcst)
+
+            if selected_forecastModels == 'ARIMA':
+                pass
+
+        elif forecastModel_Type == 'Bi-variate':
 
             fig = make_subplots(
                 rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
@@ -659,7 +757,7 @@ def app():
                 width=1000,
                 #   height=500,
                 margin=dict(
-                l=0,
+                l=50,
                 r=0,
                 b=0,
                 t=0,
@@ -723,13 +821,12 @@ def app():
                 width=1000,
                 #   height=500,
                 margin=dict(
-                l=0,
+                l=50,
                 r=0,
                 b=0,
                 t=0,
                 pad=0
             ))
-            fig.update_xaxes(automargin=False)
             fig.update_yaxes(automargin=False)
 
             forecast_plot.plotly_chart(fig)
@@ -737,8 +834,59 @@ def app():
             resultsExpander = forecast_plot.beta_expander(
                 'Forecast Result Table')
 
-            resultsExpander.write('Forecasted Production Data:')
             resultsExpander.write(fcst)
 
     with output_forecast:
-        output_forecast.markdown('## Results')
+        output_forecast.markdown('## Forecast Output')
+
+        if forecastModel_Type == 'Manual':
+
+            if selected_forecastModels == 'Naive':
+
+                output_forecast.write(
+                    'Squared Error: ' + str(round(np.sqrt(forecast_error), 2)))
+
+        elif forecastModel_Type == 'ARIMA':
+            pass
+
+        else:
+
+            output_forecast.markdown(
+                f"#### Gas Cum Production [Mcf]")
+
+            gasProduced_ = round(data['Gas Production [Kcfd]'].sum(), 2)
+            gasProduced = f"{gasProduced_:,}"
+
+            output_forecast.markdown(
+                f"<h1 style = 'text-align: center; color: black;'>{gasProduced}</h1>", unsafe_allow_html=True)
+
+            st.markdown("<hr/>", unsafe_allow_html=True)
+
+            output_forecast.markdown(
+                f"#### Gas Reserves [Mcf] | Average")
+
+            gasReserves = round(fcst['fcst'].sum(), 2)
+
+            gasReserves = f"{gasReserves:,}"
+            output_forecast.markdown(
+                f"<h1 style = 'text-align: center; color: black;'>{gasReserves}</h1>", unsafe_allow_html=True)
+
+            output_forecast.markdown(
+                f"#### Gas Reserves [Mcf] | Upper")
+
+            gasReserves_upper = round(fcst['fcst_upper'].sum(), 2)
+
+            gasReserves_upper = f"{gasReserves_upper:,}"
+            output_forecast.markdown(
+                f"<h3 style = 'text-align: center; color: black;'>{gasReserves_upper}</h1>", unsafe_allow_html=True)
+
+            output_forecast.markdown(
+                f"#### Gas Reserves [Mcf] | Lower")
+
+            gasReserves_lower = round(fcst['fcst_lower'].sum(), 2)
+
+            gasReserves_lower = f"{gasReserves_lower:,}"
+            output_forecast.markdown(
+                f"<h3 style = 'text-align: center; color: black;'>{gasReserves_lower}</h1>", unsafe_allow_html=True)
+
+            st.markdown("<hr/>", unsafe_allow_html=True)
