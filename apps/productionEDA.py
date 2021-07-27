@@ -470,43 +470,58 @@ def app():
                             'High P-vale (higher than 0.05) implies series is not stationary.')
 
             elif (plot_Type == 'Custom'):
-                customModelType = ['Moving Average']
+
+                customModelType = ['ARIMA', 'Moving Average']
 
                 customModel_Type = production_params.radio(
-                    'Seasonal Model Type', customModelType)
+                    'Model', customModelType)
 
-                customModel_period = production_params.slider('Period:',
-                                                              min_value=1, value=30, max_value=365)
+                if customModel_Type == 'ARIMA':
+                    ARIMAModel_Type = production_params.radio(
+                        'Model', ['Manual', 'Auto'])
 
-                data['MovAverage'] = data[plot_selectionVariable].rolling(
-                    window=customModel_period).mean()
+                    if (ARIMAModel_Type == 'Manual'):
+                        pass
+                    elif (ARIMAModel_Type == 'Auto'):
+                        pass
 
-                fig = go.Figure()
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=data[plot_selectionVariable], name="Observed"))
+                elif customModel_Type == 'Moving Average':
 
-                fig.add_trace(go.Scatter(
-                    x=data['Date'], y=data['MovAverage'], name="Moving Average"))
-                fig.layout.update(xaxis_rangeslider_visible=True)
+                    MovingAverageExpander = st.beta_expander(
+                        'Moving Average Parameters')
 
-                fig.update_layout(legend=dict(
-                    orientation="h",
-                    #     yanchor="bottom",
-                    #     yanchor="top",
-                    #     y=0.99,
-                    #     xanchor="right",
-                    #     x=0.01
-                ),
-                    # showlegend=False,
-                    autosize=True,
-                    width=1150,
-                    height=650,
-                    margin=dict(
-                    l=50,
-                    r=0,
-                    b=0,
-                    t=0,
-                    pad=0
-                ))
-                fig.update_yaxes(automargin=False)
-                production_plot.plotly_chart(fig)
+                    customModel_period = MovingAverageExpander.slider('Period:',
+                                                                      min_value=1, value=30, max_value=365)
+
+                    data['MovAverage'] = data[plot_selectionVariable].rolling(
+                        window=customModel_period).mean()
+
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=data[plot_selectionVariable], name="Observed"))
+
+                    fig.add_trace(go.Scatter(
+                        x=data['Date'], y=data['MovAverage'], name="Moving Average"))
+                    fig.layout.update(xaxis_rangeslider_visible=True)
+
+                    fig.update_layout(legend=dict(
+                        orientation="h",
+                        #     yanchor="bottom",
+                        #     yanchor="top",
+                        #     y=0.99,
+                        #     xanchor="right",
+                        #     x=0.01
+                    ),
+                        # showlegend=False,
+                        autosize=True,
+                        width=1150,
+                        height=650,
+                        margin=dict(
+                        l=50,
+                        r=0,
+                        b=0,
+                        t=0,
+                        pad=0
+                    ))
+                    fig.update_yaxes(automargin=False)
+                    production_plot.plotly_chart(fig)

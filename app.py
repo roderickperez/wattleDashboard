@@ -31,7 +31,7 @@ app.add_app("Viewer", viewer.app)
 app.add_app("EDA Production", productionEDA.app)
 app.add_app("Declination Curve", declinationCurve.app)
 # app.add_app("ML Production Forecast", MLforecast.app)
-app.add_app("ML Production Forecast (beta)", MLforecast2.app)
+app.add_app("ML Production Forecast", MLforecast2.app)
 #app.add_app("Viewer)", viewer.app)
 app.add_app("Economics", economics.app)
 

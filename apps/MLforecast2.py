@@ -6,7 +6,7 @@ import copy
 import pandas as pd
 import numpy as np
 from sklearn.metrics import mean_squared_error
-from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
+from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.stattools import pacf, acf
 # from prophet import Prophet
 # from prophet.diagnostics import cross_validation
@@ -223,7 +223,38 @@ def app():
                     # Calculate the Auto-Regressive Integrated Moving Average
 
                     # plot_acf(data_df)
-                    pass
+                    data_df['date'] = pd.to_datetime(data_df['time']).dt.date
+
+                    ARIMAModelParameters = st.beta_expander(
+                        'ARIMA Parameters')
+
+                    lags = ARIMAModelParameters.slider(
+                        'Lags:', min_value=0, value=100, max_value=300)
+
+                    alpha = ARIMAModelParameters.slider(
+                        'Alpha:', min_value=0.00, value=0.05, max_value=1.00)
+
+                    train_perc = ARIMAModelParameters.slider(
+                        'Training %:', min_value=0.0, value=0.8, max_value=1.0)
+
+                    data_df_train = data_df[0:int(len(data_df) * train_perc)]
+                    data_df_test = data_df[int(len(data_df) * train_perc):]
+
+                    arima_p = ARIMAModelParameters.slider(
+                        'p:', min_value=0, value=0, max_value=lags)
+
+                    arima_d = ARIMAModelParameters.slider(
+                        'd:', min_value=0, value=0, max_value=2)
+
+                    arima_q = ARIMAModelParameters.slider(
+                        'q:', min_value=0, value=0, max_value=lags)
+
+                    ARIMA_model = ARIMA(data_df_train['production'], order=(
+                        arima_p, arima_d, arima_q))
+
+                    ARIMA_model_fit = ARIMA_model.fit()
+
+                    fcst = ARIMA_model_fit.forecast(steps=len(data_df_test))[0]
 
             elif forecastModel_Type == 'Univariate':
 
@@ -251,9 +282,6 @@ def app():
 
                 if selected_forecastModels == 'Prophet':
                     # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.prophet.html
-
-                    modelParametersExpander = forecast_params.beta_expander(
-                        'Parameters')
 
                     prophetSeasonality = ['Multiplicative', 'Additive']
 
@@ -704,7 +732,73 @@ def app():
                 resultsExpander.write(fcst)
 
             if selected_forecastModels == 'ARIMA':
-                pass
+
+                fig = make_subplots(
+                    rows=1, cols=2, subplot_titles=("Partial Autocorrelation (PACF)", "Autocorrelation (ACF)"))
+
+                df_pacf = pacf(data_df['production'], nlags=lags, alpha=alpha)
+                df_acf = acf(data_df['production'], nlags=lags, alpha=alpha)
+
+                df_pacf_lower_y = df_pacf[1][:, 0] - df_pacf[0]
+                df_pacf_upper_y = df_pacf[1][:, 1] - df_pacf[0]
+
+                df_acf_lower_y = df_acf[1][:, 0] - df_acf[0]
+                df_acf_upper_y = df_acf[1][:, 1] - df_acf[0]
+
+                #####################
+
+                [fig.add_scatter(x=(x, x), y=(0, df_pacf[0][x]), row=1, col=1, mode='lines', line_color='#3f3f3f')
+                 for x in range(len(df_pacf[0]))]
+
+                fig.add_scatter(x=np.arange(len(df_pacf[0])), y=df_pacf[0], mode='markers', marker_color='#1f77b4',
+                                marker_size=12, row=1, col=1)
+
+                fig.add_scatter(x=np.arange(len(
+                    df_pacf[0])), y=df_pacf_upper_y, mode='lines', line_color='rgba(255,255,255,0)', row=1, col=1)
+                fig.add_scatter(x=np.arange(len(df_pacf[0])), y=df_pacf_lower_y, mode='lines', fillcolor='rgba(32, 146, 230,0.3)',
+                                fill='tonexty', line_color='rgba(255,255,255,0)', row=1, col=1)
+
+                fig.add_vline(x=arima_p,  line_width=1, row=1, col=1,
+                              line_dash="dash", line_color="red")
+
+                fig.update_layout(showlegend=False,
+                                  autosize=True,
+                                  width=1000,
+                                  height=700,
+                                  xaxis_title="Lag",
+                                  yaxis_title="Partial Autocorrelation",
+                                  )
+
+                #####################
+
+                [fig.add_scatter(x=(x, x), y=(0, df_acf[0][x]), row=1, col=2, mode='lines', line_color='#3f3f3f')
+                 for x in range(len(df_pacf[0]))]
+
+                fig.add_scatter(x=np.arange(len(df_acf[0])), y=df_acf[0], mode='markers', marker_color='#1f77b4',
+                                marker_size=12, row=1, col=2)
+
+                fig.add_scatter(x=np.arange(len(
+                    df_acf[0])), y=df_acf_upper_y, mode='lines', line_color='rgba(255,255,255,0)', row=1, col=2)
+                fig.add_scatter(x=np.arange(len(df_acf[0])), y=df_acf_lower_y, mode='lines', fillcolor='rgba(32, 146, 230,0.3)',
+                                fill='tonexty', line_color='rgba(255,255,255,0)', row=1, col=2)
+
+                fig.add_vline(x=arima_q,  line_width=1, row=1, col=2,
+                              line_dash="dash", line_color="red")
+
+                fig.update_layout(showlegend=False,
+                                  autosize=True,
+                                  width=1100,
+                                  height=700,
+                                  xaxis_title="Lag",
+                                  yaxis_title="Autocorrelation",
+                                  )
+
+                fig['layout']['xaxis']['title'] = 'Lags'
+                fig['layout']['xaxis2']['title'] = 'Lags'
+                fig['layout']['yaxis']['title'] = 'Partial Autocorrelation'
+                fig['layout']['yaxis2']['title'] = 'Autocorrelation'
+
+                forecast_plot.plotly_chart(fig)
 
         elif forecastModel_Type == 'Bi-variate':
 
@@ -843,11 +937,58 @@ def app():
 
             if selected_forecastModels == 'Naive':
 
-                output_forecast.write(
-                    'Squared Error: ' + str(round(np.sqrt(forecast_error), 2)))
+                output_forecast.markdown(
+                    f"#### Naive Model Error")
 
-        elif forecastModel_Type == 'ARIMA':
-            pass
+                Naive_error = round(np.sqrt(forecast_error), 2)
+
+                Naive_error_ = f"{Naive_error:,}"
+
+                output_forecast.markdown(
+                    f"<h1 style = 'text-align: center; color: black;'>{Naive_error_}</h1>", unsafe_allow_html=True)
+
+            elif selected_forecastModels == 'ARIMA':
+
+                ARIMAModelSummary = output_forecast.beta_expander(
+                    'ARIMA Model Summary')
+
+                ARIMAModelSummary.write(ARIMA_model_fit.summary())
+
+                ARIMA_error = np.sqrt(mean_squared_error(
+                    data_df_test['production'], fcst))
+
+                st.markdown("<hr/>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"#### Akaike Information Critera (AIC)")
+
+                AIC = round(ARIMA_model_fit.aic, 2)
+
+                AIC_ = f"{AIC:,}"
+
+                output_forecast.markdown(
+                    f"<h1 style = 'text-align: center; color: black;'>{AIC_}</h1>", unsafe_allow_html=True)
+
+                st.markdown("<hr/>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"#### ARIMA Model Error")
+
+                ARIMA_error_ = round(ARIMA_error, 2)
+
+                ARIMA_error_ = f"{ARIMA_error_:,}"
+
+                output_forecast.markdown(
+                    f"<h1 style = 'text-align: center; color: black;'>{ARIMA_error_}</h1>", unsafe_allow_html=True)
+
+                st.markdown("<hr/>", unsafe_allow_html=True)
+
+                output_forecast.write(
+                    'Total samples: ' + (str(len(data_df))))
+                output_forecast.write(
+                    'Training samples ' + (str(len(data_df_train))))
+                output_forecast.write(
+                    'Testing samples: ' + (str(len(data_df_test))))
 
         else:
 
