@@ -18,9 +18,11 @@ app = MultiApp()
 image = Image.open('images/wattleLogo.png')
 st.sidebar.image(image, width=300)
 
+
 st.sidebar.markdown("""
 # VMM-1
 """)
+
 
 # Add all your application here
 app.add_app("Home", home.app)
@@ -36,6 +38,15 @@ app.add_app("ML Production Forecast", MLforecast2.app)
 #app.add_app("Viewer)", viewer.app)
 app.add_app("Economics", economics.app)
 
-
 # The main app
 app.run()
+
+st.sidebar.write("Version: 0.1.0")
+st.sidebar.write("Last Update: August, 8th, 2021")
+
+st.sidebar.markdown("### Information")
+
+st.sidebar.write(
+    "Calle 100 #8A - 55 - Edificio World Trade Center - Torre C - Oficina 210 - Bogotá - Colombia")
+st.sidebar.write("[Website](https://wattlepc.com/en/)")
+st.sidebar.write("[Email](info@wattlepc.com)")

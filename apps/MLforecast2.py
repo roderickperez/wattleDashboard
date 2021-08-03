@@ -1,6 +1,6 @@
 import streamlit as st
 # from statsmodels.tsa.seasonal import seasonal_decompose
-# import datetime
+import datetime
 import copy
 
 import pandas as pd
@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.metrics import mean_squared_error
 from statsmodels.tsa.arima_model import ARIMA
 from statsmodels.tsa.stattools import pacf, acf
+from statsmodels.tsa.seasonal import seasonal_decompose
 # from prophet import Prophet
 # from prophet.diagnostics import cross_validation
 # from prophet.diagnostics import performance_metrics
@@ -21,12 +22,12 @@ import warnings
 # Kats Model Import
 from kats.consts import TimeSeriesData
 from kats.models.prophet import ProphetModel, ProphetParams
-from kats.models.theta import ThetaModel, ThetaParams
-from kats.models.sarima import SARIMAModel, SARIMAParams
+# from kats.models.theta import ThetaModel, ThetaParams
+# from kats.models.sarima import SARIMAModel, SARIMAParams
 from kats.models.arima import ARIMAModel, ARIMAParams
-from kats.models.holtwinters import HoltWintersParams, HoltWintersModel
-from kats.models.linear_model import LinearModel, LinearModelParams
-from kats.models.quadratic_model import QuadraticModel, QuadraticModelParams
+# from kats.models.holtwinters import HoltWintersParams, HoltWintersModel
+# from kats.models.linear_model import LinearModel, LinearModelParams
+# from kats.models.quadratic_model import QuadraticModel, QuadraticModelParams
 
 # Vector autoregression (VAR) used in Multivariable forecasting
 from kats.models.var import VARModel, VARParams
@@ -39,9 +40,9 @@ from kats.models.ensemble.kats_ensemble import KatsEnsemble
 import kats.utils.time_series_parameter_tuning as tpt
 from kats.consts import ModelEnum, SearchMethodEnum, TimeSeriesData
 
-from ax.core.parameter import ChoiceParameter, FixedParameter, ParameterType
-from ax.models.random.sobol import SobolGenerator
-from ax.models.random.uniform import UniformGenerator
+# from ax.core.parameter import ChoiceParameter, FixedParameter, ParameterType
+# from ax.models.random.sobol import SobolGenerator
+# from ax.models.random.uniform import UniformGenerator
 
 
 warnings.simplefilter('ignore')
@@ -157,15 +158,34 @@ def app():
                      "Toposi-2H", "LaEstancia-1H")
             selected_well = st.selectbox("Select a well", wells)
 
+            #################################
+            forecast_params.markdown('#### Series')
+
+            seriesParameters = forecast_params.beta_expander(
+                'Seasonality')
+
+            seasonalityMode = ['Daily', 'Monthly', 'Yearly', 'Custom']
+
+            seasonalityType = seriesParameters.radio(
+                'Mode', seasonalityMode, index=1)
+
+            if (seasonalityType == 'Daily'):
+                seasonalityPeriod = 1
+            elif (seasonalityType == 'Monthly'):
+                seasonalityPeriod = 30
+            elif (seasonalityType == 'Yearly'):
+                seasonalityPeriod = 365
+            else:
+                seasonalityPeriod = seriesParameters.slider('Period:',
+                                                            min_value=1, value=30, max_value=365)
             #############################################
 
             forecast_params.markdown('#### Forecast')
 
             forecastParameters = forecast_params.beta_expander(
-                'General Parameters')
+                'Parameters')
 
-            predictionPeriod = forecastParameters.slider(
-                'Period (days):', min_value=1, value=1825, max_value=3650)
+            #################################
 
             forecastModelType = [
                 'Manual', 'Univariate', 'Ensamble', 'Bi-variate']
@@ -174,7 +194,7 @@ def app():
                 'Forecast Model Type', forecastModelType)
 
             modelParametersExpander = forecast_params.beta_expander(
-                'Parameters')
+                'Model Parameters')
 
             if forecastModel_Type == 'Manual':
 
@@ -187,7 +207,54 @@ def app():
                 data_df.rename(
                     {'Date': 'time', 'Gas Production [Kcfd]': 'production'}, axis=1, inplace=True)
 
+                data_df['time'] = pd.to_datetime(
+                    data_df.time, format='%m/%d/%Y')
+
+                # forecast_plot.write(data_df)
+
+                dataSeasonal = seasonal_decompose(
+                    data_df['production'], model=seasonalityType, period=seasonalityPeriod)
+
                 ##################################
+                total_days = len(data_df['time'])
+
+                test_days = forecastParameters.slider('Test (days):',
+                                                      min_value=0, value=365, max_value=total_days)
+
+                train_days = forecastParameters.slider('Train (days):',
+                                                       min_value=0, value=total_days-test_days, max_value=total_days)
+
+                predictionPeriod = forecastParameters.slider(
+                    'Predict (days):', min_value=1, value=1825, max_value=3650)
+
+                train_first = data_df['time'].iloc[0].date()
+                train_end = data_df['time'].iloc[train_days].date()
+
+                test_first = data_df['time'].iloc[train_days+1].date()
+                test_end = data_df['time'].iloc[-1].date()
+
+                forecastParameters.markdown('### Train')
+                train_start_date = forecastParameters.date_input(
+                    'Start date', train_first)
+                train_end_date = forecastParameters.date_input(
+                    'End date', train_end)
+
+                if train_start_date > train_end_date:
+                    forecastParameters.error(
+                        'Error: End date must fall after start date.')
+
+                forecastParameters.markdown('### Test')
+
+                test_start_date = forecastParameters.date_input(
+                    'Start date ', test_first)
+                test_end_date = forecastParameters.date_input(
+                    'End date ', test_end)
+
+                if test_start_date > test_end_date:
+                    forecastParameters.error(
+                        'Error: End date must fall after start date.')
+
+                #################################
 
                 forecastModels = ("Naive", "ARIMA")
                 selected_forecastModels = forecast_params.selectbox(
@@ -198,6 +265,16 @@ def app():
 
                     shift = modelParametersExpander.slider(
                         'Shift:', min_value=0, value=1, max_value=365)
+
+                    if (seasonalityType == 'Daily'):
+                        seasonalityPeriod = 1
+                    elif (seasonalityType == 'Monthly'):
+                        seasonalityPeriod = 30
+                    elif (seasonalityType == 'Yearly'):
+                        seasonalityPeriod = 365
+                    else:
+                        seasonalityPeriod = modelParametersExpander.slider('Period:',
+                                                                           min_value=1, value=30, max_value=365)
 
                     data_ts = pd.concat(
                         [data_df['production'], data_df['production'].shift(shift)], axis=1)
@@ -212,7 +289,8 @@ def app():
 
                     fcst.columns = ['time', 'fcst']
 
-                    fcst['date'] = pd.to_datetime(fcst['time']).dt.date
+                    fcst['date'] = pd.to_datetime(
+                        fcst['time']).dt.date
 
                     fcst.dropna(inplace=True)
 
@@ -221,7 +299,47 @@ def app():
 
                 elif selected_forecastModels == 'ARIMA':
 
-                    pass
+                    train_ts = data_df[0:train_days]
+                    test_ts = data_df[train_days+1:]
+
+                    arima_p = modelParametersExpander.slider(
+                        'ARIMA "p" (Manual):', min_value=0, value=55, max_value=150, help='Order of Auto-Regressive Model (AR), or periods')
+
+                    arima_d = modelParametersExpander.slider(
+                        'ARIMA "d" (Manual): ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary.')
+
+                    arima_q = modelParametersExpander.slider(
+                        'ARIMA "q" (Manual):', min_value=0, value=5, max_value=10, help='Dependency on error of the previous lagged values (Moving Average, MA)')
+
+                    m = ARIMA(train_ts['production'], order=(
+                        arima_p, arima_d, arima_q))
+                    model_fit = m.fit(disp=0)
+
+                    fcst_ = model_fit.forecast(steps=predictionPeriod)[0]
+
+                    fcst_ = pd.DataFrame(fcst_, columns=['fcst'])
+
+                    fcst_date = pd.DataFrame(pd.date_range(
+                        start=test_end, periods=predictionPeriod), columns=['time'])
+
+                    fcst_date['date'] = fcst_date['time'].dt.date
+
+                    fcst_date['date'] = pd.to_datetime(
+                        fcst_date.date, format='%Y-%m-%d')
+                    # fcst_date.date.dt.strftime('%Y-%m-%d').astype(int)
+
+                    fcst_date['date'] = fcst_date['date'].dt.strftime(
+                        '%Y-%m-%d')
+
+                    fcst_date = pd.DataFrame(fcst_date.drop(['time'], axis=1))
+
+                    frame = [fcst_date, fcst_]
+
+                    fcst = pd.concat(frame, axis=1)
+
+                    # forecast_plot.write("fcst")
+
+                    # forecast_plot.write(fcst)
 
             elif forecastModel_Type == 'Univariate':
 
@@ -242,8 +360,7 @@ def app():
 
                 ##################################
 
-                forecastModels = ("Prophet", "ARIMA",
-                                  "SARIMA", "Holt-Winters", "Theta", "Linear", "Quadratic")
+                forecastModels = ("Prophet", "ARIMA")
                 selected_forecastModels = forecast_params.selectbox(
                     "Select Forecast Model", forecastModels)
 
@@ -270,15 +387,19 @@ def app():
                         'Forecast Model Type', ['Manual', 'Automatic'])
 
                     if forecastModel_Type == 'Manual':
-
                         arima_p = modelParametersExpander.slider(
-                            'p:', min_value=0, value=1, max_value=5)
+                            'ARIMA "p" (Manual):', min_value=0, value=1, max_value=5, help='Order of Auto-Regressive Model (AR), or periods')
 
                         arima_d = modelParametersExpander.slider(
-                            'd:', min_value=0, value=0, max_value=2)
+                            'ARIMA "d" (Manual): ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary.')
 
                         arima_q = modelParametersExpander.slider(
-                            'q:', min_value=0, value=1, max_value=5)
+                            'ARIMA "q" (Manual):', min_value=0, value=1, max_value=5, help='Dependency on error of the previous lagged values (Moving Average, MA)')
+
+                        prophetSeasonality = ['Multiplicative', 'Additive']
+
+                        prophet_seasonality = modelParametersExpander.radio(
+                            'Seasonal Model Type', prophetSeasonality)
 
                     elif forecastModel_Type == 'Automatic':
                         arima_p = 1
@@ -286,13 +407,13 @@ def app():
                         arima_q = 1
 
                         arima_p_range = modelParametersExpander.slider(
-                            'p:', min_value=0, value=[1, 3], max_value=5)
+                            'ARIMA "p" (Prophet):', min_value=0, value=[1, 3], max_value=5)
 
                         arima_d_range = modelParametersExpander.slider(
-                            'd:', min_value=0, value=[1, 3], max_value=5)
+                            'ARIMA "d" (Prophet):', min_value=0, value=[1, 3], max_value=5)
 
                         arima_q_range = modelParametersExpander.slider(
-                            'q:', min_value=0, value=[1, 3], max_value=5)
+                            'ARIMA "q" (Prophet):', min_value=0, value=[1, 3], max_value=5)
 
                         parameters_grid_search = [
                             {
@@ -393,110 +514,10 @@ def app():
                     # initiate ARIMA model
                     m = ARIMAModel(data=data_ts, params=params)
 
-                elif selected_forecastModels == 'SARIMA':
-                    # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.sarima.html
-                    sarima_p = st.slider(
-                        'p:', min_value=0, value=2, max_value=5)
-
-                    sarima_d = st.slider(
-                        'd:', min_value=0, value=1, max_value=5)
-
-                    sarima_q = st.slider(
-                        'q:', min_value=0, value=1, max_value=5)
-
-                    params = SARIMAParams(
-                        p=sarima_p,
-                        d=sarima_d,
-                        q=sarima_q
-                    )
-
-                    # initiate SARIMA model
-                    m = SARIMAModel(data=data_ts, params=params)
-
-                elif selected_forecastModels == 'Holt-Winters':
-                    HoltWintersTrend = ["add", "mul",
-                                        "additive", "multiplicative"]
-
-                    HoltWinters_trend = st.radio(
-                        'Seasonal Model Type', HoltWintersTrend)
-
-                    HoltWintersSamped = [False, True]
-
-                    HoltWinters_damped = st.radio(
-                        'Seasonal Model Type', HoltWintersSamped)
-
-                    HoltWintersSeasonal = [None, 'add',
-                                           'mul', 'additive', 'multiplicative']
-
-                    HoltWinters_seasonal = st.radio(
-                        'Seasonal Model Type', HoltWintersSeasonal)
-
-                    HoltWinters_seasonal_periods = st.slider(
-                        'Seasonal Periods:', min_value=1, value=10, max_value=20)
-
-                    HoltWinters_alpha = st.slider(
-                        'Alpha:', min_value=0.0, value=0.1, max_value=1.0)
-
-                    params = HoltWintersParams(
-                        trend=HoltWinters_trend,
-                        damped=HoltWinters_damped,
-                        seasonal=HoltWinters_seasonal,
-                        seasonal_periods=HoltWinters_seasonal_periods,
-                    )
-
-                    # initiate Holt-Winters model
-                    m = HoltWintersModel(data=data_ts, params=params)
-
-                elif selected_forecastModels == 'Theta':
-                    theta_m = st.slider(
-                        'm:', min_value=0, value=100, max_value=200)
-
-                    params = ThetaParams(
-                        m=theta_m,
-                    )
-
-                    # initiate THETA model
-                    m = ThetaModel(data=data_ts, params=params)
-
-                elif selected_forecastModels == 'Linear':
-
-                    params = LinearModelParams(
-                    )
-
-                    # initiate LINEAR model
-                    m = LinearModel(data=data_ts, params=params)
-
-                elif selected_forecastModels == 'Quadratic':
-                    params = QuadraticModelParams(
-                    )
-
-                    # initiate LINEAR model
-                    m = QuadraticModel(data=data_ts, params=params)
-
                     # ##################################
 
                 # Fit the model
                 m.fit()
-
-                #####################################
-                # Generate forecast values
-
-                if selected_forecastModels == 'Holt-Winters':
-                    fcst = m.predict(
-                        steps=predictionPeriod,
-                        alpha=HoltWinters_alpha)
-
-                elif forecastModelType == 'Ensamble':
-                    fcst = m.predict(steps=predictionPeriod)
-
-                    # aggregate individual model results
-                    m.aggregate()
-
-                else:
-                    fcst = m.predict(
-                        steps=predictionPeriod,
-                        freq="D"
-                    )
 
             elif forecastModel_Type == 'Ensamble':
 
@@ -519,64 +540,38 @@ def app():
 
                 st.write("Select models to add into ensamble")
                 checkProphet = st.checkbox('Prophet', value=True)
-                checkSARIMA = st.checkbox('SARIMA', value=True)
                 checkARIMA = st.checkbox('ARIMA', value=False)
-                checkHoltWinters = st.checkbox('Holt-Winters', value=False)
-                checkTheta = st.checkbox('Theta', value=False)
-                checkLinear = st.checkbox('Linear', value=False)
-                checkQuadratic = st.checkbox('Quadratic', value=False)
 
                 if checkProphet:
                     pass
-                if checkSARIMA:
-                    pass
                 if checkARIMA:
-                    pass
-                if checkHoltWinters:
-                    pass
-                if checkTheta:
-                    pass
-                if checkLinear:
-                    pass
-                if checkQuadratic:
                     pass
 
                 # we need define params for each individual forecasting model in `EnsembleParams` class
                 # here we include 6 different models
                 model_params = EnsembleParams(
                     [
-                        # BaseModelParams(
-                        #     "arima",
-                        #     ARIMAParams(
-                        #           p=1,
-                        #           d=1,
-                        #           q=1)),
-                        # BaseModelParams(
-                        #     "sarima",
-                        #     SARIMAParams(
-                        #         p=2,
-                        #         d=1,
-                        #         q=1,
-                        #         trend="ct",
-                        #         seasonal_order=(1, 0, 1, 12),
-                        #         enforce_invertibility=False,
-                        #         enforce_stationarity=False)),
-
-                        BaseModelParams("prophet", ProphetParams()),
                         BaseModelParams(
-                            "linear", LinearModelParams()),
-                        # BaseModelParams(
-                        #     "quadratic", QuadraticModelParams()),
-                        # BaseModelParams("theta", ThetaParams(m=100)),
+                            "arima",
+                            ARIMAParams(
+                                p=1,
+                                d=1,
+                                q=1)),
+                        BaseModelParams("prophet", ProphetParams()),
                     ]
                 )
+
+                prophetSeasonality = ['Multiplicative', 'Additive']
+
+                prophet_seasonality = modelParametersExpander.radio(
+                    'Seasonal Model Type', prophetSeasonality)
 
                 # create `KatsEnsembleParam` with detailed configurations
                 KatsEnsembleParam = {
                     "models": model_params,
                     "aggregation": "median",
                     "seasonality_length": 2,
-                    "decomposition_method": "multiplicative",
+                    "decomposition_method": prophet_seasonality,
                 }
 
                 # create 'KatsEnsemble' model
@@ -670,6 +665,25 @@ def app():
                 fig.add_hline(y=economicLimit,  line_width=1,
                               line_dash="dash", line_color="black")
 
+                # TODO : delete because in the Naive model we use the entire dataset
+
+                # fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                #               line_width=0, fillcolor="red", opacity=0.05)
+                # fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                #               line_width=0, fillcolor="green", opacity=0.05)
+
+                # fig.add_vline(x=train_start_date,  line_width=1,
+                #               line_dash="dash", line_color="black")
+                # fig.add_vline(x=train_end_date,  line_width=1,
+                #               line_dash="dash", line_color="red")
+                # fig.add_vline(x=test_start_date,  line_width=1,
+                #               line_dash="dash", line_color="green")
+
+                # fig.add_vline(x=test_end_date,  line_width=1,
+                #               line_dash="dash", line_color="green")
+                # fig.add_vline(x=forecast_end_date,  line_width=1,
+                #               line_dash="solid", line_color="purple")
+
                 fig.update_layout(legend=dict(
                     orientation="h",
                     #     yanchor="bottom",
@@ -700,9 +714,76 @@ def app():
 
             if selected_forecastModels == 'ARIMA':
 
-                pass
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production'))
 
-                
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['date'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+                # fig.add_vline(x=forecast_end_date,  line_width=1,
+                #               line_dash="solid", line_color="purple")
+
+                # fig.layout.update(xaxis_rangeslider_visible=True)
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=600,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                resultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result Table')
+
+                # resultsExpander.write(fcst)
+
+                # TODO: These parameters should change position in the code
+
+                # arima_p = modelParametersExpander.slider(
+                #     'p:', min_value=0, value=1, max_value=5, help='Order of Auto-Regressive Model (AR), or periods')
+
+                # arima_d = modelParametersExpander.slider(
+                #     'd:', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary.')
+
+                # arima_q = modelParametersExpander.slider(
+                #     'q:', min_value=0, value=1, max_value=5, help='Dependency on error of the previous lagged values (Moving Average, MA)')
 
         elif forecastModel_Type == 'Bi-variate':
 
@@ -786,18 +867,18 @@ def app():
                 x=data_df['date'], y=data_df['production'], name='Production'))
             fig.layout.update(xaxis_rangeslider_visible=True)
 
-            fig.add_trace(go.Scatter(
-                x=fcst['time'], y=fcst['fcst'], name='Forecast',
-                line=dict(color='firebrick', width=2)))
-            fig.layout.update(xaxis_rangeslider_visible=True)
+            # fig.add_trace(go.Scatter(
+            #     x=fcst['time'], y=fcst['fcst'], name='Forecast',
+            #     line=dict(color='firebrick', width=2)))
+            # fig.layout.update(xaxis_rangeslider_visible=True)
 
-            fig.add_trace(go.Scatter(
-                x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (Upper)', fill=None,
-                line=dict(color='red', width=0.2)))
+            # fig.add_trace(go.Scatter(
+            #     x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (Upper)', fill=None,
+            #     line=dict(color='red', width=0.2)))
 
-            fig.add_trace(go.Scatter(
-                x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(255, 0, 0, 0.1)',
-                line=dict(color='red', width=0.2)))
+            # fig.add_trace(go.Scatter(
+            #     x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(255, 0, 0, 0.1)',
+            #     line=dict(color='red', width=0.2)))
 
             fig.layout.update(xaxis_rangeslider_visible=True)
 
@@ -830,7 +911,7 @@ def app():
             resultsExpander = forecast_plot.beta_expander(
                 'Forecast Result Table')
 
-            resultsExpander.write(fcst)
+            # resultsExpander.write(fcst)
 
     with output_forecast:
         output_forecast.markdown('## Forecast Output')
@@ -851,46 +932,88 @@ def app():
 
             elif selected_forecastModels == 'ARIMA':
 
-                pass
+                output_forecast.write(model_fit.summary())
+                # output_forecast.write(model_fit.aic)
+
+        elif forecastModel_Type == 'Bi-variate':
+            output_forecast.markdown(
+                f"#### Gas Cum Production [Mcf]")
+
+            gasProduced = round(data['Gas Production [Kcfd]'].sum(), 2)
+            gasProduced_ = f"{gasProduced:,}"
+
+            output_forecast.markdown(
+                f"<h1 style = 'text-align: center; color: black;'>{gasProduced_}</h1>", unsafe_allow_html=True)
+
+            st.markdown("<hr/>", unsafe_allow_html=True)
+
+            output_forecast.markdown(
+                f"#### Gas Reserves [Mcf] ")
+
+            gasReserves = round(fcstV1['fcst'].sum(), 2)
+
+            gasReserves_ = f"{gasReserves:,}"
+            output_forecast.markdown(
+                f"<h1 style = 'text-align: center; color: black;'>{gasReserves_}</h1>", unsafe_allow_html=True)
+
+            output_forecast.markdown("<hr/>", unsafe_allow_html=True)
+
+            output_forecast.markdown(
+                f"#### EUR [Mcf]")
+
+            EUR = round(gasProduced + gasReserves, 2)
+
+            EUR_ = f"{EUR:,}"
+            output_forecast.markdown(
+                f"<h1 style = 'text-align: center; color: black;'>{EUR_}</h1>", unsafe_allow_html=True)
 
         else:
 
             output_forecast.markdown(
                 f"#### Gas Cum Production [Mcf]")
 
-            gasProduced_ = round(data['Gas Production [Kcfd]'].sum(), 2)
-            gasProduced = f"{gasProduced_:,}"
+            gasProduced = round(data['Gas Production [Kcfd]'].sum(), 2)
+            gasProduced_ = f"{gasProduced:,}"
 
             output_forecast.markdown(
                 f"<h1 style = 'text-align: center; color: black;'>{gasProduced}</h1>", unsafe_allow_html=True)
 
-            st.markdown("<hr/>", unsafe_allow_html=True)
+            output_forecast.markdown("<hr/>", unsafe_allow_html=True)
 
             output_forecast.markdown(
                 f"#### Gas Reserves [Mcf] | Average")
 
-            gasReserves = round(fcst['fcst'].sum(), 2)
+            # gasReserves = round(fcst['fcst'].sum(), 2)
 
-            gasReserves = f"{gasReserves:,}"
-            output_forecast.markdown(
-                f"<h1 style = 'text-align: center; color: black;'>{gasReserves}</h1>", unsafe_allow_html=True)
+            # gasReserves_ = f"{gasReserves:,}"
+            # output_forecast.markdown(
+            #     f"<h1 style = 'text-align: center; color: black;'>{gasReserves_}</h1>", unsafe_allow_html=True)
 
-            output_forecast.markdown(
-                f"#### Gas Reserves [Mcf] | Upper")
+            # output_forecast.markdown(
+            #     f"#### Gas Reserves [Mcf] | Upper")
 
-            gasReserves_upper = round(fcst['fcst_upper'].sum(), 2)
+            # gasReserves_upper = round(fcst['fcst_upper'].sum(), 2)
 
-            gasReserves_upper = f"{gasReserves_upper:,}"
-            output_forecast.markdown(
-                f"<h3 style = 'text-align: center; color: black;'>{gasReserves_upper}</h1>", unsafe_allow_html=True)
+            # gasReserves_upper = f"{gasReserves_upper:,}"
+            # output_forecast.markdown(
+            #     f"<h3 style = 'text-align: center; color: black;'>{gasReserves_upper}</h1>", unsafe_allow_html=True)
 
-            output_forecast.markdown(
-                f"#### Gas Reserves [Mcf] | Lower")
+            # output_forecast.markdown(
+            #     f"#### Gas Reserves [Mcf] | Lower")
 
-            gasReserves_lower = round(fcst['fcst_lower'].sum(), 2)
+            # gasReserves_lower = round(fcst['fcst_lower'].sum(), 2)
 
-            gasReserves_lower = f"{gasReserves_lower:,}"
-            output_forecast.markdown(
-                f"<h3 style = 'text-align: center; color: black;'>{gasReserves_lower}</h1>", unsafe_allow_html=True)
+            # gasReserves_lower = f"{gasReserves_lower:,}"
+            # output_forecast.markdown(
+            #     f"<h3 style = 'text-align: center; color: black;'>{gasReserves_lower}</h1>", unsafe_allow_html=True)
 
-            st.markdown("<hr/>", unsafe_allow_html=True)
+            # output_forecast.markdown("<hr/>", unsafe_allow_html=True)
+
+            # output_forecast.markdown(
+            #     f"#### EUR [Mcf]")
+
+            # EUR = round(gasProduced + gasReserves, 2)
+
+            # EUR_ = f"{EUR:,}"
+            # output_forecast.markdown(
+            #     f"<h1 style = 'text-align: center; color: black;'>{EUR_}</h1>", unsafe_allow_html=True)
