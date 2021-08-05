@@ -11,8 +11,6 @@ from statsmodels.tsa.stattools import adfuller
 import pandas as pd
 from plotly import graph_objs as go
 import matplotlib.pyplot as plt
-import itertools
-from pandas.plotting import autocorrelation_plot
 import warnings
 
 warnings.simplefilter('ignore')
