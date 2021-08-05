@@ -23,12 +23,12 @@ import warnings
 from kats.consts import TimeSeriesData
 from kats.models.prophet import ProphetModel, ProphetParams
 # from kats.models.theta import ThetaModel, ThetaParams
-# from kats.models.sarima import SARIMAModel, SARIMAParams
+from kats.models.sarima import SARIMAModel, SARIMAParams
 from kats.models.arima import ARIMAModel, ARIMAParams
-# from kats.models.holtwinters import HoltWintersParams, HoltWintersModel
-# from kats.models.linear_model import LinearModel, LinearModelParams
-# from kats.models.quadratic_model import QuadraticModel, QuadraticModelParams
-
+from kats.models.holtwinters import HoltWintersParams, HoltWintersModel
+from kats.models.linear_model import LinearModel, LinearModelParams
+from kats.models.quadratic_model import QuadraticModel, QuadraticModelParams
+from kats.models.lstm import LSTMModel, LSTMParams
 # Vector autoregression (VAR) used in Multivariable forecasting
 from kats.models.var import VARModel, VARParams
 
@@ -40,16 +40,16 @@ from kats.models.ensemble.kats_ensemble import KatsEnsemble
 import kats.utils.time_series_parameter_tuning as tpt
 from kats.consts import ModelEnum, SearchMethodEnum, TimeSeriesData
 
-# from ax.core.parameter import ChoiceParameter, FixedParameter, ParameterType
-# from ax.models.random.sobol import SobolGenerator
-# from ax.models.random.uniform import UniformGenerator
+from ax.core.parameter import ChoiceParameter, FixedParameter, ParameterType
+from ax.models.random.sobol import SobolGenerator
+from ax.models.random.uniform import UniformGenerator
 
 
 warnings.simplefilter('ignore')
 
 
 def app():
-    st.markdown('# Production')
+    st.markdown('# Production Forecast')
     st.markdown('## Machine Learning')
 
     columns = ['Well Head Pressure [PSI]', 'Pressure Line [PSI]', 'DP in H2O', 'Casing Pressure [Psi]', 'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
@@ -85,9 +85,10 @@ def app():
 
     with forecast_params:
 
-        forecast_params.markdown('## Parameters')
+        forecast_params.markdown('### Parameters')
 
-        economicParameters = forecast_params.beta_expander('Economic')
+        economicParameters = forecast_params.beta_expander(
+            'Economic Limit Parameters')
 
         workingInterest = economicParameters.slider('Working Interest (%):',
                                                     min_value=0.0, value=100.0, max_value=100.0)
@@ -159,7 +160,7 @@ def app():
             selected_well = st.selectbox("Select a well", wells)
 
             #################################
-            forecast_params.markdown('#### Series')
+            forecast_params.markdown('#### Data')
 
             seriesParameters = forecast_params.beta_expander(
                 'Seasonality')
@@ -168,6 +169,49 @@ def app():
 
             seasonalityType = seriesParameters.radio(
                 'Mode', seasonalityMode, index=1)
+
+            #############################################
+
+            forecast_params.markdown('#### Forecast')
+
+            forecastParameters = forecast_params.beta_expander(
+                'Dates')
+
+            #################################
+
+            forecastModelType = [
+                'Naive', 'ARIMA (Manual)', 'Prophet', 'ARIMA (Prophet)', 'SARIMA (Prophet)', 'LSTM', 'Linear', 'Quadratic', 'Holt-Winter', 'Ensamble', 'Bi-variate']
+
+            forecastModel_Type = forecast_params.selectbox(
+                'Forecast Model Type', forecastModelType)
+
+            modelParametersExpander = forecast_params.beta_expander(
+                'Model Parameters')
+
+            #################################
+            # Data Loading
+
+            data = load_data()
+
+            data_df = copy.deepcopy(data)
+
+            data_df.rename(
+                {'Date': 'time', 'Gas Production [Kcfd]': 'production'}, axis=1, inplace=True)
+
+            data_df['time'] = pd.to_datetime(
+                data_df.time, format='%m/%d/%Y')
+
+            #################################
+            # Check if there is any null value in the data
+
+            nullTest = data_df['production'].isnull(
+            ).values.any()
+
+            if (nullTest == True):
+                data_df['production'] = data_df['production'].fillna(
+                    0)
+
+            #################################
 
             if (seasonalityType == 'Daily'):
                 seasonalityPeriod = 1
@@ -180,345 +224,761 @@ def app():
                                                             min_value=1, value=30, max_value=365)
             #############################################
 
-            forecast_params.markdown('#### Forecast')
-
-            forecastParameters = forecast_params.beta_expander(
-                'Parameters')
+            dataSeasonal = seasonal_decompose(
+                data_df['production'], model=seasonalityType, period=seasonalityPeriod)
 
             #################################
 
-            forecastModelType = [
-                'Manual', 'Univariate', 'Ensamble', 'Bi-variate']
+            # Forecast Parameters
+            total_days = len(data_df['time'])
 
-            forecastModel_Type = forecast_params.radio(
-                'Forecast Model Type', forecastModelType)
+            test_days = forecastParameters.slider('Test (days):',
+                                                  min_value=0, value=730, max_value=total_days)
 
-            modelParametersExpander = forecast_params.beta_expander(
-                'Model Parameters')
+            train_days = forecastParameters.slider('Train (days):',
+                                                   min_value=0, value=total_days-test_days, max_value=total_days)
 
-            if forecastModel_Type == 'Manual':
+            predictionPeriod = forecastParameters.slider(
+                'Predict (days):', min_value=1, value=1825, max_value=3650)
 
-                # Data Preparation
+            train_first = data_df['time'].iloc[0].date()
+            train_end = data_df['time'].iloc[train_days].date()
 
-                data = load_data()
+            test_first = data_df['time'].iloc[train_days+1].date()
+            test_end = data_df['time'].iloc[-1].date()
 
-                data_df = copy.deepcopy(data)
+            forecastParameters.markdown('### Train')
+            train_start_date = forecastParameters.date_input(
+                'Start date', train_first)
+            train_end_date = forecastParameters.date_input(
+                'End date', train_end)
 
-                data_df.rename(
-                    {'Date': 'time', 'Gas Production [Kcfd]': 'production'}, axis=1, inplace=True)
+            if train_start_date > train_end_date:
+                forecastParameters.error(
+                    'Error: End date must fall after start date.')
 
-                data_df['time'] = pd.to_datetime(
-                    data_df.time, format='%m/%d/%Y')
+            forecastParameters.markdown('### Test')
 
-                # forecast_plot.write(data_df)
+            test_start_date = forecastParameters.date_input(
+                'Start date ', test_first)
+            test_end_date = forecastParameters.date_input(
+                'End date ', test_end)
 
-                dataSeasonal = seasonal_decompose(
-                    data_df['production'], model=seasonalityType, period=seasonalityPeriod)
+            if test_start_date > test_end_date:
+                forecastParameters.error(
+                    'Error: End date must fall after start date.')
 
-                ##################################
-                total_days = len(data_df['time'])
+            #################################
 
-                test_days = forecastParameters.slider('Test (days):',
-                                                      min_value=0, value=365, max_value=total_days)
+            if forecastModel_Type == 'Naive':
 
-                train_days = forecastParameters.slider('Train (days):',
-                                                       min_value=0, value=total_days-test_days, max_value=total_days)
+                shift = modelParametersExpander.slider(
+                    'Shift:', min_value=0, value=1, max_value=365)
 
-                predictionPeriod = forecastParameters.slider(
-                    'Predict (days):', min_value=1, value=1825, max_value=3650)
+                data_ts = pd.concat(
+                    [dataSeasonal.trend, dataSeasonal.trend.shift(shift)], axis=1)
 
-                train_first = data_df['time'].iloc[0].date()
-                train_end = data_df['time'].iloc[train_days].date()
+                data_ts.columns = ['original', 'forecast']
 
-                test_first = data_df['time'].iloc[train_days+1].date()
-                test_end = data_df['time'].iloc[-1].date()
+                data_ts.dropna(inplace=True)
 
-                forecastParameters.markdown('### Train')
-                train_start_date = forecastParameters.date_input(
-                    'Start date', train_first)
-                train_end_date = forecastParameters.date_input(
-                    'End date', train_end)
+                fcst = pd.concat(
+                    [data_df['time'], data_ts['forecast']], axis=1)
 
-                if train_start_date > train_end_date:
-                    forecastParameters.error(
-                        'Error: End date must fall after start date.')
+                fcst.columns = ['time', 'fcst']
 
-                forecastParameters.markdown('### Test')
+                fcst['date'] = pd.to_datetime(
+                    fcst['time']).dt.date
 
-                test_start_date = forecastParameters.date_input(
-                    'Start date ', test_first)
-                test_end_date = forecastParameters.date_input(
-                    'End date ', test_end)
+                fcst.dropna(inplace=True)
 
-                if test_start_date > test_end_date:
-                    forecastParameters.error(
-                        'Error: End date must fall after start date.')
+                forecast_error = mean_squared_error(
+                    data_ts.original, fcst.fcst)
+
+            elif forecastModel_Type == 'ARIMA (Manual)':
+
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
 
                 #################################
 
-                forecastModels = ("Naive", "ARIMA")
-                selected_forecastModels = forecast_params.selectbox(
-                    "Select Forecast Model", forecastModels)
+                # Train - Test Split
 
-                if selected_forecastModels == 'Naive':
-                    # convert to TimeSeriesData object
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
 
-                    shift = modelParametersExpander.slider(
-                        'Shift:', min_value=0, value=1, max_value=365)
+                #################################
+                # Parameters
 
-                    if (seasonalityType == 'Daily'):
-                        seasonalityPeriod = 1
-                    elif (seasonalityType == 'Monthly'):
-                        seasonalityPeriod = 30
-                    elif (seasonalityType == 'Yearly'):
-                        seasonalityPeriod = 365
-                    else:
-                        seasonalityPeriod = modelParametersExpander.slider('Period:',
-                                                                           min_value=1, value=30, max_value=365)
+                arima_p = modelParametersExpander.slider(
+                    'p:', min_value=0, value=0, max_value=10, help='Order of Auto-Regressive Model (AR), or periods (See ACF plot).')
 
-                    data_ts = pd.concat(
-                        [data_df['production'], data_df['production'].shift(shift)], axis=1)
+                arima_d = modelParametersExpander.slider(
+                    'd: ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary (See Differentiating plot).')
 
-                    data_ts.columns = ['original', 'forecast']
-                    data_ts.dropna(inplace=True)
+                arima_q = modelParametersExpander.slider(
+                    'q:', min_value=0, value=0, max_value=10, help='Dependency on error of the previous lagged values (Moving Average, MA) (See PACF plot)')
 
-                    # fcst = data_df['time']
-
-                    fcst = pd.concat(
-                        [data_df['time'], data_ts['forecast']], axis=1)
-
-                    fcst.columns = ['time', 'fcst']
-
-                    fcst['date'] = pd.to_datetime(
-                        fcst['time']).dt.date
-
-                    fcst.dropna(inplace=True)
-
-                    forecast_error = mean_squared_error(
-                        data_ts.original, fcst.fcst)
-
-                elif selected_forecastModels == 'ARIMA':
-
-                    train_ts = data_df[0:train_days]
-                    test_ts = data_df[train_days+1:]
-
-                    arima_p = modelParametersExpander.slider(
-                        'ARIMA "p" (Manual):', min_value=0, value=55, max_value=150, help='Order of Auto-Regressive Model (AR), or periods')
-
-                    arima_d = modelParametersExpander.slider(
-                        'ARIMA "d" (Manual): ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary.')
-
-                    arima_q = modelParametersExpander.slider(
-                        'ARIMA "q" (Manual):', min_value=0, value=5, max_value=10, help='Dependency on error of the previous lagged values (Moving Average, MA)')
-
-                    m = ARIMA(train_ts['production'], order=(
-                        arima_p, arima_d, arima_q))
-                    model_fit = m.fit(disp=0)
-
-                    fcst_ = model_fit.forecast(steps=predictionPeriod)[0]
-
-                    fcst_ = pd.DataFrame(fcst_, columns=['fcst'])
-
-                    fcst_date = pd.DataFrame(pd.date_range(
-                        start=test_end, periods=predictionPeriod), columns=['time'])
-
-                    fcst_date['date'] = fcst_date['time'].dt.date
-
-                    fcst_date['date'] = pd.to_datetime(
-                        fcst_date.date, format='%Y-%m-%d')
-                    # fcst_date.date.dt.strftime('%Y-%m-%d').astype(int)
-
-                    fcst_date['date'] = fcst_date['date'].dt.strftime(
-                        '%Y-%m-%d')
-
-                    fcst_date = pd.DataFrame(fcst_date.drop(['time'], axis=1))
-
-                    frame = [fcst_date, fcst_]
-
-                    fcst = pd.concat(frame, axis=1)
-
-                    # forecast_plot.write("fcst")
-
-                    # forecast_plot.write(fcst)
-
-            elif forecastModel_Type == 'Univariate':
-
-                ##################################
-
-                # Data Preparation
-
-                data = load_data()
-
-                data_df = copy.deepcopy(data)
-
-                data_df.rename(
-                    {'Date': 'time', 'Gas Production [Kcfd]': 'production'}, axis=1, inplace=True)
-
-                # convert to TimeSeriesData object
-
-                data_ts = TimeSeriesData(data_df)
-
-                ##################################
-
-                forecastModels = ("Prophet", "ARIMA")
-                selected_forecastModels = forecast_params.selectbox(
-                    "Select Forecast Model", forecastModels)
-
-                if selected_forecastModels == 'Prophet':
-                    # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.prophet.html
-
-                    prophetSeasonality = ['Multiplicative', 'Additive']
-
-                    prophet_seasonality = modelParametersExpander.radio(
-                        'Seasonal Model Type', prophetSeasonality)
-
-                    prophet_seasonality = prophet_seasonality.lower()
-
-                    params = ProphetParams(
-                        seasonality_mode=prophet_seasonality)
-
-                    # create a prophet model instance
-                    m = ProphetModel(data_ts, params)
-
-                elif selected_forecastModels == 'ARIMA':
-                    # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.arima.html
-
-                    forecastModel_Type = modelParametersExpander.radio(
-                        'Forecast Model Type', ['Manual', 'Automatic'])
-
-                    if forecastModel_Type == 'Manual':
-                        arima_p = modelParametersExpander.slider(
-                            'ARIMA "p" (Manual):', min_value=0, value=1, max_value=5, help='Order of Auto-Regressive Model (AR), or periods')
-
-                        arima_d = modelParametersExpander.slider(
-                            'ARIMA "d" (Manual): ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary.')
-
-                        arima_q = modelParametersExpander.slider(
-                            'ARIMA "q" (Manual):', min_value=0, value=1, max_value=5, help='Dependency on error of the previous lagged values (Moving Average, MA)')
-
-                        prophetSeasonality = ['Multiplicative', 'Additive']
-
-                        prophet_seasonality = modelParametersExpander.radio(
-                            'Seasonal Model Type', prophetSeasonality)
-
-                    elif forecastModel_Type == 'Automatic':
-                        arima_p = 1
-                        arima_d = 0
-                        arima_q = 1
-
-                        arima_p_range = modelParametersExpander.slider(
-                            'ARIMA "p" (Prophet):', min_value=0, value=[1, 3], max_value=5)
-
-                        arima_d_range = modelParametersExpander.slider(
-                            'ARIMA "d" (Prophet):', min_value=0, value=[1, 3], max_value=5)
-
-                        arima_q_range = modelParametersExpander.slider(
-                            'ARIMA "q" (Prophet):', min_value=0, value=[1, 3], max_value=5)
-
-                        parameters_grid_search = [
-                            {
-                                "name": "p",
-                                "type": "choice",
-                                "values": list(range(arima_p_range[0], arima_p_range[1])),
-                                "value_type": "int",
-                                "is_ordered": True,
-                            },
-                            {
-                                "name": "d",
-                                "type": "choice",
-                                "values": list(range(0, 1)),
-                                # "values": list(range(arima_d_range[0], arima_d_range[1])),
-                                "value_type": "int",
-                                "is_ordered": True,
-                            },
-                            {
-                                "name": "q",
-                                "type": "choice",
-                                "values": list(range(0, 1)),
-                                # "values": list(range(arima_q_range[0], arima_q_range[1])),
-                                "value_type": "int",
-                                "is_ordered": True,
-                            },
-                        ]
-
-                        parameter_tuner_grid = tpt.SearchMethodFactory.create_search_method(
-                            objective_name="evaluation_metric",
-                            parameters=parameters_grid_search,
-                            selected_search_method=SearchMethodEnum.GRID_SEARCH,
-                        )
-
-                        splitPercentage = modelParametersExpander.slider(
-                            'Split Percentage [%]:', min_value=0.0, value=80.0, max_value=100.0)
-
-                        split = int((splitPercentage/100)*len(data_df))
-
-                        train_ts = data_ts[0:split]
-                        test_ts = data_ts[split:]
-
-                        evaluationFunction = modelParametersExpander.radio(
-                            'Forecast Model Type', [
-                                'Mean Absolute Error (MAE)',
-                                'Mean Absolute Percentage Error (MAPE)',
-                                'Symmetric Mean Absolute Percentage Error (SMAPE)',
-                                'Mean Squared Error (MSE)',
-                                'Mean Absolute Scaled Error (MASE)',
-                                'Root Mean Squared Error (RMSE)'
-                            ])
-
-                        if evaluationFunction == 'Mean Absolute Error (MAE)':
-                            evaluationFunction = 'mae'
-                            # Fit an ARIMA model and calculate the MAE for the test data
-
-                            def evaluation_function(params):
-                                arima_params = ARIMAParams(
-                                    p=params['p'],
-                                    d=params['d'],
-                                    q=params['q']
-                                )
-                                model = ARIMAModel(train_ts, arima_params)
-                                model.fit()
-                                model_pred = model.predict(steps=len(test_ts))
-                                error = np.mean(
-                                    np.abs(model_pred['fcst'].values - test_ts.value.values))
-                                return error
-
-                        elif evaluationFunction == 'Mean Absolute Percentage Error (MAPE)':
-                            pass
-                        elif evaluationFunction == 'Symmetric Mean Absolute Percentage Error (SMAPE)':
-                            pass
-                        elif evaluationFunction == 'Mean Squared Error (MSE)':
-                            pass
-                        elif evaluationFunction == 'Mean Absolute Scaled Error (MASE)':
-                            pass
-                        elif evaluationFunction == 'Root Mean Squared Error (RMSE)':
-                            pass
-
-                        parameter_tuner_grid.generate_evaluate_new_parameter_values(
-                            evaluation_function=evaluation_function
-                        )
-
-                        parameter_tuning_results_grid = (
-                            parameter_tuner_grid.list_parameter_value_scores()
-                        )
-
-                        # Retrieve parameter tuning results
-
-                        st.write(parameter_tuning_results_grid)
-
-                    params = ARIMAParams(
-                        p=arima_p,
-                        d=arima_d,
-                        q=arima_q
-                    )
-
-                    # initiate ARIMA model
-                    m = ARIMAModel(data=data_ts, params=params)
-
-                    # ##################################
+                #################################
+                #  Model
+                m = ARIMA(train_ts['production'], order=(
+                    arima_p, arima_d, arima_q))
 
                 # Fit the model
-                m.fit()
 
+                model_fit = m.fit(disp=0)
+
+                #################################
+                # Test Results with Test Data
+
+                start = len(train_ts)
+                end = len(train_ts) + len(test_ts)-1
+
+                pred = model_fit.predict(start=start, end=end)
+
+                pred_ = pd.concat(
+                    [test_ts['time'], pred.shift(1)], axis=1)
+
+                pred_.columns = ['time', 'prediction']
+
+                error = mean_squared_error(
+                    pred, test_ts.production)
+
+                #################################
+                # Forecast (Use the full time series)
+
+                m_ = ARIMA(data_df_['production'], order=(
+                    arima_p, arima_d, arima_q))
+
+                model_fit_ = m_.fit(disp=0)
+
+                fcst_ = model_fit_.forecast(steps=predictionPeriod)[0]
+
+                fcst_ = pd.DataFrame(fcst_, columns=['fcst'])
+
+                fcst_date = pd.DataFrame(pd.date_range(
+                    start=test_end, periods=predictionPeriod), columns=['time'])
+
+                fcst_date['date'] = fcst_date['time'].dt.date
+
+                fcst_date['date'] = pd.to_datetime(
+                    fcst_date.date, format='%Y-%m-%d')
+                # fcst_date.date.dt.strftime('%Y-%m-%d').astype(int)
+
+                fcst_date['date'] = fcst_date['date'].dt.strftime(
+                    '%Y-%m-%d')
+
+                fcst_date = pd.DataFrame(fcst_date.drop(['time'], axis=1))
+
+                frame = [fcst_date, fcst_]
+
+                fcst = pd.concat(frame, axis=1)
+
+            elif forecastModel_Type == 'Prophet':
+
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.prophet.html
+                # https://github.com/facebook/prophet/blob/master/python/prophet/forecaster.py
+                prophet_Growth = modelParametersExpander.radio(
+                    'Seasonal Model Type', ['linear', 'logistic'], help='String ‘linear’ or ‘logistic’ to specify a linear or logistic trend.')
+
+                n_changepoints = modelParametersExpander.slider(
+                    'Number of change points:', min_value=1, value=60, max_value=100, help='Number of potential changepoints to include. Not used if input changepoints is supplied. If changepoints is not supplied, then n_changepoints potential changepoints are selected uniformly from the first changepoint_range proportion of the history.')
+
+                changepoint_range = modelParametersExpander.slider(
+                    'Changepoint Range', min_value=0.0, value=0.8, max_value=1.0, help='Proportion of history in which trend changepoints will be estimated. Defaults to 0.8 for the first 80%. Not used if changepoints is specified.')
+
+                yearly_seasonality = modelParametersExpander.radio(
+                    'Yearly Seasonality', ['auto', True, False], help='Fit yearly seasonality. Can be ‘auto’, True, False, or a number of Fourier terms to generate.')
+
+                weekly_seasonality = modelParametersExpander.radio(
+                    'Weekly Seasonality', ['auto', True, False], help='Fit weekly seasonality. Can be ‘auto’, True, False, or a number of Fourier terms to generate.')
+
+                daily_seasonality = modelParametersExpander.radio(
+                    'Daily  Seasonality', ['auto', True, False], help='Fit daily seasonality. Can be ‘auto’, True, False, or a number of Fourier terms to generate.')
+
+                prophet_seasonality = modelParametersExpander.radio(
+                    'Seasonalily Model', ['multiplicative', 'additive'], help='Seasonalily model, "additive" (default) or "multiplicative".')
+
+                seasonality_prior_scale = modelParametersExpander.slider(
+                    'Seasonality Prior Scale', min_value=0.0, value=10.0, max_value=100.0, help='Parameter modulating the strength of the seasonality model. Larger values allow the model to fit larger seasonal fluctuations, smaller values dampen the seasonality. Can be specified for individual seasonalities using add_seasonality.')
+
+                holidays_prior_scale = modelParametersExpander.slider(
+                    'Holidays Prior Scale', min_value=0.0, value=10.0, max_value=100.0, help='Parameter modulating the strength of the holiday components model, unless overridden in the holidays input.')
+                changepoint_prior_scale = modelParametersExpander.slider(
+                    'Changepoint Prior Scale', min_value=0.00, value=0.05, max_value=1.00, help='Parameter modulating the flexibility of the automatic changepoint selection. Large values will allow many changepoints, small values will allow few changepoints.')
+                interval_width = modelParametersExpander.slider(
+                    'Interval Width', min_value=0.00, value=0.05, max_value=1.00, help='Width of the uncertainty intervals provided for the forecast.')
+                uncertainty_samples = modelParametersExpander.slider(
+                    'Uncertainty Samples', min_value=0, value=1000, max_value=len(data_df_), help='Number of simulated draws used to estimate uncertainty intervals. Settings this value to 0 will disable uncertainty estimation and speed up the calculation.')
+                cap = modelParametersExpander.slider(
+                    'Cap', min_value=0.0, value=150.0, max_value=5000.0, help='Capacity, provided for logistic growth.')
+                floor = modelParametersExpander.slider(
+                    'Floor', min_value=0.0, value=150.0, max_value=5000.0, help='The forecast value must be greater than the specified floor.')
+
+                params = ProphetParams(
+                    growth=prophet_Growth,
+                    n_changepoints=n_changepoints,
+                    changepoint_range=changepoint_range,
+                    yearly_seasonality=yearly_seasonality,
+                    weekly_seasonality=weekly_seasonality,
+                    daily_seasonality=daily_seasonality,
+                    seasonality_mode=prophet_seasonality,
+                    seasonality_prior_scale=seasonality_prior_scale,
+                    holidays_prior_scale=holidays_prior_scale,
+                    changepoint_prior_scale=changepoint_prior_scale,
+                    interval_width=interval_width,
+                    uncertainty_samples=uncertainty_samples,
+                    cap=cap,
+                    floor=floor)
+
+                ##################################
+                # TEST model
+
+                m = ProphetModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts))
+
+                # forecast_plot.write(pred)
+
+                # forecast_plot.write(test_ts)
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # FORECAST model (using the entire time series)
+
+                # forecast_plot.write(data_df_)
+
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = ProphetModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod)
+
+            elif forecastModel_Type == 'ARIMA (Prophet)':
+
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.arima.html
+                arima_p = modelParametersExpander.slider(
+                    'p:', min_value=0, value=0, max_value=10, help='Order of Auto-Regressive Model (AR), or periods (See ACF plot).')
+
+                arima_d = modelParametersExpander.slider(
+                    'd: ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary (See Differentiating plot).')
+
+                arima_q = modelParametersExpander.slider(
+                    'q:', min_value=0, value=0, max_value=10, help='Dependency on error of the previous lagged values (Moving Average, MA) (See PACF plot)')
+
+                method = modelParametersExpander.radio(
+                    'Method', ['css-mle', 'mle', 'css'], help='Loglikelihood to maximize.')
+                trend = modelParametersExpander.radio(
+                    'Trend', ['c', 'nc'], help='Specifies the whether to include a constant in the trend or not.')
+                solver = modelParametersExpander.radio(
+                    'Solver', ['bfgs', 'newton', 'cg', 'ncg', 'powell'], help='A string that specifies specifies the solver to be used.')
+                maxiter = modelParametersExpander.slider(
+                    'Maximum Iterations', min_value=1, value=500, max_value=3000, help='Maximum number of function iterations.')
+                tol = modelParametersExpander.slider(
+                    'Convergence Tolerance ', min_value=1, value=500, max_value=3000, help='Convergence tolerance for the fitting.')
+
+                params = ARIMAParams(
+                    p=arima_p,
+                    d=arima_d,
+                    q=arima_q,
+                    method=method,
+                    trend=trend,
+                    solver=solver,
+                    maxiter=maxiter,
+                    tol=tol)
+
+                ##################################
+                # TEST model
+
+                m = ARIMAModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts))
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = ARIMAModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod)
+
+            elif forecastModel_Type == 'SARIMA (Prophet)':
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.sarima.html
+                sarima_p = modelParametersExpander.slider(
+                    'p:', min_value=0, value=0, max_value=10, help='Order of Auto-Regressive Model (AR), or periods (See ACF plot).')
+
+                sarima_d = modelParametersExpander.slider(
+                    'd: ', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary (See Differentiating plot).')
+
+                sarima_q = modelParametersExpander.slider(
+                    'q:', min_value=0, value=0, max_value=10, help='Dependency on error of the previous lagged values (Moving Average, MA) (See PACF plot)')
+
+                cov_type = modelParametersExpander.radio(
+                    'Covariance Matrix', ['opg', 'oim', 'approx', 'robust', 'robust_approx'], help='Method for calculating the covariance matrix of parameter estimates. Can be "opg" (outer product of gradient estimator), "oim" (observed information matrix estimato), "approx" (observed information matrix estimator), "robust" (approximate (quasi-maximum likelihood) covariance matrix), or "robust_approx". Default is "opg" when memory conservation is not used, otherwise default is "approx".')
+
+                method = modelParametersExpander.radio(
+                    'Method', ['lbfgs', 'newton', 'nm', 'bfgs', 'powell', 'cg', 'ncg', 'basinhopping'], help='Solver method.')
+                trend = modelParametersExpander.radio(
+                    'Trend', ['ct', 'nc'], help='Specifies the whether to include a constant in the trend or not.')
+                maxiter = modelParametersExpander.slider(
+                    'Maximum Iterations', min_value=1, value=500, max_value=3000, help='Maximum number of function iterations.')
+                alpha = modelParametersExpander.slider(
+                    'Confidence Level', min_value=0.00, value=0.05, max_value=1.00, help='Prediction confidence level.')
+
+                params = SARIMAParams(
+                    p=sarima_p,
+                    d=sarima_d,
+                    q=sarima_q,
+                    cov_type=cov_type,
+                    method=method,
+                    trend=trend,
+                    maxiter=maxiter,
+                    alpha=alpha
+                )
+
+                ##################################
+                # TEST model
+
+                m = SARIMAModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts))
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = SARIMAModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod)
+
+            elif forecastModel_Type == 'LSTM':
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+                epochs = modelParametersExpander.slider(
+                    'Epochs', min_value=1, value=1, max_value=100, help='Training epochs.')
+                hidden_size = modelParametersExpander.slider(
+                    'Hidden Size', min_value=1, value=1, max_value=100, help='Training epochs.')
+                time_window = modelParametersExpander.slider(
+                    'Time Window', min_value=1, value=1, max_value=100, help='Training epochs.')
+
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.lstm.html
+
+                params = LSTMParams(
+                    num_epochs=epochs,
+                    hidden_size=hidden_size,
+                    time_window=time_window
+                )
+
+                ##################################
+                # TEST model
+
+                m = LSTMModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts))
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = LSTMModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod)
+
+            elif forecastModel_Type == 'Linear':
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.linear_model.html
+                alpha = modelParametersExpander.slider(
+                    'Confidence Level', min_value=0.00, value=0.05, max_value=1.00, help='Prediction confidence level.')
+
+                params = LinearModelParams(
+                    alpha=alpha
+                )
+
+                ##################################
+                # TEST model
+
+                m = LinearModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts))
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = LinearModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod)
+
+            elif forecastModel_Type == 'Quadratic':
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.quadratic_model.html
+                alpha = modelParametersExpander.slider(
+                    'Confidence Level', min_value=0.00, value=0.05, max_value=1.00, help='Prediction confidence level.')
+
+                params = QuadraticModelParams(
+                    alpha=alpha
+                )
+
+                ##################################
+                # TEST model
+
+                m = QuadraticModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts))
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = QuadraticModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod)
+            elif forecastModel_Type == 'Holt-Winter':
+                data_df_ = pd.concat(
+                    [data_df['time'], dataSeasonal.trend], axis=1)
+
+                data_df_.columns = ['time', 'production']
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_['production'].isnull(
+                ).values.any()
+
+                # Delete rows with NA values
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                #################################
+
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # Convert to Prophet Time Series format
+
+                train_ts_ = TimeSeriesData(train_ts)
+
+                #################################
+                # Parameters
+                # Check extra parameters: https://facebookresearch.github.io/Kats/api/kats.models.holtwinters.html
+                # trend = modelParametersExpander.radio(
+                #     'Trend', ['additive', 'multiplicative'], help='Type of trend component.')
+
+                damped = modelParametersExpander.radio(
+                    'Trend', [True, False], help='indicates whether the trend should be damped or not (Default is False).')
+
+                # seasonal = modelParametersExpander.radio(
+                #     'Seasonal', [None, 'additive', 'multiplicative'], help='Type of trend component.')
+                alpha = modelParametersExpander.slider(
+                    'Confidence Level', min_value=0.00, value=0.1, max_value=1.00, help='Prediction confidence level.')
+
+                params = HoltWintersParams(
+                    # trend=trend,
+                    damped=damped,
+                    # seasonal=seasonal
+
+                )
+
+                ##################################
+                # TEST model
+
+                m = HoltWintersModel(train_ts_, params)
+                model_fit = m.fit()
+
+                #################################
+                # Test Results with Test Data
+
+                pred = m.predict(steps=len(test_ts), alpha=alpha)
+
+                #####################################
+                # Calculate Test Error
+                error = np.mean(
+                    np.abs(pred['fcst'].values - test_ts['production'].values))
+
+                ##################################
+                # Convert to Prophet Time Series format
+
+                data_df_ = TimeSeriesData(data_df_)
+
+                # forecast_plot.write(data_df_)
+
+                m_ = HoltWintersModel(data_df_, params)
+                model_fit_ = m_.fit()
+
+                fcst = m_.predict(steps=predictionPeriod, alpha=alpha)
             elif forecastModel_Type == 'Ensamble':
 
                 ##################################
@@ -638,24 +1098,20 @@ def app():
             pass
 
     ##################################
-    ##################################
 
-    with forecast_plot:
+        with forecast_plot:
 
-        ##################
-        # Plot
+            fig = go.Figure()
 
-        # Add column with Date (re-formated)
+            if forecastModel_Type == 'Naive':
 
-        data_df['date'] = pd.to_datetime(data_df['time']).dt.date
+                # forecast_plot.write(dataSeasonal.trend)
 
-        fig = go.Figure()
-
-        if forecastModel_Type == 'Manual':
-
-            if selected_forecastModels == 'Naive':
                 fig.add_trace(go.Scatter(
-                    x=data_df['date'], y=data_df['production'], name='Production'))
+                    x=data_df['time'], y=data_df['production'], name='Production', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=dataSeasonal.trend, name='Trend', line=dict(color='red')))
 
                 fig.add_trace(go.Scatter(
                     x=fcst['date'], y=fcst['fcst'], name='Forecast'))
@@ -664,25 +1120,6 @@ def app():
 
                 fig.add_hline(y=economicLimit,  line_width=1,
                               line_dash="dash", line_color="black")
-
-                # TODO : delete because in the Naive model we use the entire dataset
-
-                # fig.add_vrect(x0=train_start_date, x1=train_end_date,
-                #               line_width=0, fillcolor="red", opacity=0.05)
-                # fig.add_vrect(x0=test_start_date, x1=test_end_date,
-                #               line_width=0, fillcolor="green", opacity=0.05)
-
-                # fig.add_vline(x=train_start_date,  line_width=1,
-                #               line_dash="dash", line_color="black")
-                # fig.add_vline(x=train_end_date,  line_width=1,
-                #               line_dash="dash", line_color="red")
-                # fig.add_vline(x=test_start_date,  line_width=1,
-                #               line_dash="dash", line_color="green")
-
-                # fig.add_vline(x=test_end_date,  line_width=1,
-                #               line_dash="dash", line_color="green")
-                # fig.add_vline(x=forecast_end_date,  line_width=1,
-                #               line_dash="solid", line_color="purple")
 
                 fig.update_layout(legend=dict(
                     orientation="h",
@@ -707,21 +1144,31 @@ def app():
 
                 forecast_plot.plotly_chart(fig)
 
+                #########################
+                # Show results
+
                 resultsExpander = forecast_plot.beta_expander(
                     'Forecast Result Table')
 
                 resultsExpander.write(fcst)
 
-            if selected_forecastModels == 'ARIMA':
+            elif forecastModel_Type == 'ARIMA (Manual)':
 
                 fig.add_trace(go.Scatter(
-                    x=train_ts['time'], y=train_ts['production'], name='Train | Production'))
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
 
                 fig.add_trace(go.Scatter(
-                    x=test_ts['time'], y=test_ts['production'], name='Test | Production'))
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
 
                 fig.add_trace(go.Scatter(
-                    x=fcst['date'], y=fcst['fcst'], name='Forecast'))
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred_['time'], y=pred_['prediction'], name='Test',
+                    mode='markers', line=dict(color='black')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['date'], y=fcst['fcst'], name='Forecast', line=dict(color='purple')))
 
                 fig.add_hline(y=economicLimit,  line_width=1,
                               line_dash="dash", line_color="black")
@@ -769,251 +1216,1422 @@ def app():
 
                 forecast_plot.plotly_chart(fig)
 
+                #########################
+                # Show results
+
+                resultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result Table')
+
+                resultsExpander.write(fcst)
+
+            elif forecastModel_Type == 'Prophet':
+
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+
+            elif forecastModel_Type == 'ARIMA (Prophet)':
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+            elif forecastModel_Type == 'SARIMA (Prophet)':
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+            elif forecastModel_Type == 'LSTM':
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+            elif forecastModel_Type == 'Linear':
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+            elif forecastModel_Type == 'Quadratic':
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+            elif forecastModel_Type == 'Holt-Winter':
+                fig.add_trace(go.Scatter(
+                    x=data_df['time'], y=data_df['production'], name='Production (Original)', line=dict(color='gray', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=train_ts['time'], y=train_ts['production'], name='Train | Production (Original)', line=dict(color='red')))
+
+                fig.add_trace(go.Scatter(
+                    x=test_ts['time'], y=test_ts['production'], name='Test | Production (Original)', line=dict(color='green')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst'], name='Test',
+                    mode='markers', line=dict(color='black', width=0.5)))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_upper'], name='Test (upper)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=pred['time'], y=pred['fcst_lower'], name='Test (lower)',
+                    line=dict(color='royalblue', width=1, dash='dash')))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst'], name='Forecast'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (upper)'))
+
+                fig.add_trace(go.Scatter(
+                    x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'))
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black")
+
+                fig.add_vrect(x0=train_start_date, x1=train_end_date,
+                              line_width=0, fillcolor="red", opacity=0.05)
+                fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                              line_width=0, fillcolor="green", opacity=0.05)
+
+                fig.add_vline(x=train_start_date,  line_width=1,
+                              line_dash="dash", line_color="black")
+                fig.add_vline(x=train_end_date,  line_width=1,
+                              line_dash="dash", line_color="red")
+
+                fig.add_vline(x=test_start_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.add_vline(x=test_end_date,  line_width=1,
+                              line_dash="dash", line_color="green")
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=550,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                #########################
+                # Show results
+
+                # Test Results
+
+                testResultsExpander = forecast_plot.beta_expander(
+                    'Test Result')
+
+                testResultsExpander.write(pred)
+
+                # Forecast Results
+
+                forecastResultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result')
+
+                forecastResultsExpander.write(fcst)
+            elif forecastModel_Type == 'Bi-variate':
+
+                fig = make_subplots(
+                    rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
+
+                fig.add_trace(go.Scatter(
+                    x=data_df['date'], y=data_df['V1'], name='Gas Production [Kcfd]'), row=1, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=fcstV1['time'], y=fcstV1['fcst'], name='Gas Production [Kcfd] (Prediction)'), row=1, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=fcstV1['time'], y=fcstV1['fcst_upper'], name='Forecast (Upper)', fill=None,
+                    line=dict(color='red', width=0.2)), row=1, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=fcstV1['time'], y=fcstV1['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(255, 0, 0, 0.1)',
+                    line=dict(color='red', width=0.2)), row=1, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=data_df['date'], y=data_df['V2'], name=variable_2), row=2, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=fcstV2['time'], y=fcstV2['fcst'], name=variable_2), row=2, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=fcstV2['time'], y=fcstV2['fcst_upper'], name='Forecast (Upper)', fill=None,
+                    line=dict(color='red', width=0.2)), row=2, col=1)
+
+                fig.add_trace(go.Scatter(
+                    x=fcstV2['time'], y=fcstV2['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(0, 255, 247, 0.1)',
+                    line=dict(color='red', width=0.2)), row=2, col=1)
+
+                fig.add_hline(y=economicLimit,  line_width=1,
+                              line_dash="dash", line_color="black", row=1, col=1)
+
+                # fig.update_layout(width=1300, height=700)
+
+                fig.update_layout(legend=dict(
+                    orientation="h",
+                    #     yanchor="bottom",
+                    #     yanchor="top",
+                    #     y=0.99,
+                    #     xanchor="right",
+                    #     x=0.01
+                ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    #   height=500,
+                    margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+                fig.update_yaxes(automargin=False)
+
+                forecast_plot.plotly_chart(fig)
+
+                resultsExpander = forecast_plot.beta_expander(
+                    'Forecast Result Table')
+
+                resultsExpander.write('Forecasted Production Data:')
+                # TODO: edit date in table with forecasted data (V1)
+                # fcstV1['date'] = pd.to_datetime(fcstV1['time']).dt.date
+                # fcstV1 = ['date', 'fcst', 'fcst_lower', 'fcst_upper']
+                resultsExpander.write(fcstV1)
+
+                resultsExpander.write('Forecasted Variable 2:')
+                # TODO: edit date in table with forecasted data (V2)
+                # # fcstV2['date'] = pd.to_datetime(fcstV2['time']).dt.date
+                # fcstV2 = ['date', 'fcst', 'fcst_lower', 'fcst_upper']
+                resultsExpander.write(fcstV2)
+
+            elif forecastModel_Type == 'Ensamble':
+                pass
+            else:
+
+                # fig.add_trace(go.Scatter(
+                #     x=data_df['time'], y=data_df['production'], name='Production'))
+                # fig.layout.update(xaxis_rangeslider_visible=True)
+
+                # # fig.add_trace(go.Scatter(
+                # #     x=fcst['time'], y=fcst['fcst'], name='Forecast',
+                # #     line=dict(color='firebrick', width=2)))
+                # # fig.layout.update(xaxis_rangeslider_visible=True)
+
+                # # fig.add_trace(go.Scatter(
+                # #     x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (Upper)', fill=None,
+                # #     line=dict(color='red', width=0.2)))
+
+                # # fig.add_trace(go.Scatter(
+                # #     x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(255, 0, 0, 0.1)',
+                # #     line=dict(color='red', width=0.2)))
+
+                # fig.layout.update(xaxis_rangeslider_visible=True)
+
+                # fig.add_hline(y=economicLimit,  line_width=1,
+                #               line_dash="dash", line_color="black")
+
+                # fig.update_layout(legend=dict(
+                #     orientation="h",
+                #     #     yanchor="bottom",
+                #     #     yanchor="top",
+                #     #     y=0.99,
+                #     #     xanchor="right",
+                #     #     x=0.01
+                # ),
+                #     # showlegend=False,
+                #     autosize=True,
+                #     width=1000,
+                #     #   height=500,
+                #     margin=dict(
+                #     l=50,
+                #     r=0,
+                #     b=0,
+                #     t=0,
+                #     pad=0
+                # ))
+                # fig.update_yaxes(automargin=False)
+
+                # forecast_plot.plotly_chart(fig)
+
                 resultsExpander = forecast_plot.beta_expander(
                     'Forecast Result Table')
 
                 # resultsExpander.write(fcst)
 
-                # TODO: These parameters should change position in the code
+        with output_forecast:
+            output_forecast.markdown('## Forecast Output')
 
-                # arima_p = modelParametersExpander.slider(
-                #     'p:', min_value=0, value=1, max_value=5, help='Order of Auto-Regressive Model (AR), or periods')
-
-                # arima_d = modelParametersExpander.slider(
-                #     'd:', min_value=0, value=0, max_value=2, help='Order of Differentiation in order to make the series stationary.')
-
-                # arima_q = modelParametersExpander.slider(
-                #     'q:', min_value=0, value=1, max_value=5, help='Dependency on error of the previous lagged values (Moving Average, MA)')
-
-        elif forecastModel_Type == 'Bi-variate':
-
-            fig = make_subplots(
-                rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.02)
-
-            fig.add_trace(go.Scatter(
-                x=data_df['date'], y=data_df['V1'], name='Gas Production [Kcfd]'), row=1, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=fcstV1['time'], y=fcstV1['fcst'], name='Gas Production [Kcfd] (Prediction)'), row=1, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=fcstV1['time'], y=fcstV1['fcst_upper'], name='Forecast (Upper)', fill=None,
-                line=dict(color='red', width=0.2)), row=1, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=fcstV1['time'], y=fcstV1['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(255, 0, 0, 0.1)',
-                line=dict(color='red', width=0.2)), row=1, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=data_df['date'], y=data_df['V2'], name=variable_2), row=2, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=fcstV2['time'], y=fcstV2['fcst'], name=variable_2), row=2, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=fcstV2['time'], y=fcstV2['fcst_upper'], name='Forecast (Upper)', fill=None,
-                line=dict(color='red', width=0.2)), row=2, col=1)
-
-            fig.add_trace(go.Scatter(
-                x=fcstV2['time'], y=fcstV2['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(0, 255, 247, 0.1)',
-                line=dict(color='red', width=0.2)), row=2, col=1)
-
-            fig.add_hline(y=economicLimit,  line_width=1,
-                          line_dash="dash", line_color="black", row=1, col=1)
-
-            # fig.update_layout(width=1300, height=700)
-
-            fig.update_layout(legend=dict(
-                orientation="h",
-                #     yanchor="bottom",
-                #     yanchor="top",
-                #     y=0.99,
-                #     xanchor="right",
-                #     x=0.01
-            ),
-                # showlegend=False,
-                autosize=True,
-                width=1000,
-                #   height=500,
-                margin=dict(
-                l=50,
-                r=0,
-                b=0,
-                t=0,
-                pad=0
-            ))
-            fig.update_yaxes(automargin=False)
-
-            forecast_plot.plotly_chart(fig)
-
-            resultsExpander = forecast_plot.beta_expander(
-                'Forecast Result Table')
-
-            resultsExpander.write('Forecasted Production Data:')
-            # TODO: edit date in table with forecasted data (V1)
-            # fcstV1['date'] = pd.to_datetime(fcstV1['time']).dt.date
-            # fcstV1 = ['date', 'fcst', 'fcst_lower', 'fcst_upper']
-            resultsExpander.write(fcstV1)
-
-            resultsExpander.write('Forecasted Variable 2:')
-            # TODO: edit date in table with forecasted data (V2)
-            # # fcstV2['date'] = pd.to_datetime(fcstV2['time']).dt.date
-            # fcstV2 = ['date', 'fcst', 'fcst_lower', 'fcst_upper']
-            resultsExpander.write(fcstV2)
-
-        else:
-
-            fig.add_trace(go.Scatter(
-                x=data_df['date'], y=data_df['production'], name='Production'))
-            fig.layout.update(xaxis_rangeslider_visible=True)
-
-            # fig.add_trace(go.Scatter(
-            #     x=fcst['time'], y=fcst['fcst'], name='Forecast',
-            #     line=dict(color='firebrick', width=2)))
-            # fig.layout.update(xaxis_rangeslider_visible=True)
-
-            # fig.add_trace(go.Scatter(
-            #     x=fcst['time'], y=fcst['fcst_upper'], name='Forecast (Upper)', fill=None,
-            #     line=dict(color='red', width=0.2)))
-
-            # fig.add_trace(go.Scatter(
-            #     x=fcst['time'], y=fcst['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(255, 0, 0, 0.1)',
-            #     line=dict(color='red', width=0.2)))
-
-            fig.layout.update(xaxis_rangeslider_visible=True)
-
-            fig.add_hline(y=economicLimit,  line_width=1,
-                          line_dash="dash", line_color="black")
-
-            fig.update_layout(legend=dict(
-                orientation="h",
-                #     yanchor="bottom",
-                #     yanchor="top",
-                #     y=0.99,
-                #     xanchor="right",
-                #     x=0.01
-            ),
-                # showlegend=False,
-                autosize=True,
-                width=1000,
-                #   height=500,
-                margin=dict(
-                l=50,
-                r=0,
-                b=0,
-                t=0,
-                pad=0
-            ))
-            fig.update_yaxes(automargin=False)
-
-            forecast_plot.plotly_chart(fig)
-
-            resultsExpander = forecast_plot.beta_expander(
-                'Forecast Result Table')
-
-            # resultsExpander.write(fcst)
-
-    with output_forecast:
-        output_forecast.markdown('## Forecast Output')
-
-        if forecastModel_Type == 'Manual':
-
-            if selected_forecastModels == 'Naive':
+            if forecastModel_Type == 'Naive':
 
                 output_forecast.markdown(
-                    f"#### Naive Model Error")
+                    f"#### Error")
 
-                Naive_error = round(np.sqrt(forecast_error), 2)
+                error = round(np.sqrt(forecast_error), 2)
 
-                Naive_error_ = f"{Naive_error:,}"
+                error_ = f"{error:,}"
 
                 output_forecast.markdown(
-                    f"<h1 style = 'text-align: center; color: black;'>{Naive_error_}</h1>", unsafe_allow_html=True)
+                    f"<h2 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h2>", unsafe_allow_html=True)
 
-            elif selected_forecastModels == 'ARIMA':
+            elif forecastModel_Type == 'ARIMA (Manual)':
 
-                output_forecast.write(model_fit.summary())
-                # output_forecast.write(model_fit.aic)
+                output_forecast.markdown(
+                    f"#### Test")
 
-        elif forecastModel_Type == 'Bi-variate':
-            output_forecast.markdown(
-                f"#### Gas Cum Production [Mcf]")
+                output_forecast.markdown(
+                    f"##### Error")
 
-            gasProduced = round(data['Gas Production [Kcfd]'].sum(), 2)
-            gasProduced_ = f"{gasProduced:,}"
+                error = round(np.sqrt(error), 2)
 
-            output_forecast.markdown(
-                f"<h1 style = 'text-align: center; color: black;'>{gasProduced_}</h1>", unsafe_allow_html=True)
+                error_ = f"{error:,}"
 
-            st.markdown("<hr/>", unsafe_allow_html=True)
+                output_forecast.markdown(
+                    f"<h2 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h2>", unsafe_allow_html=True)
 
-            output_forecast.markdown(
-                f"#### Gas Reserves [Mcf] ")
+                output_forecast.markdown("<hr/>", unsafe_allow_html=True)
 
-            gasReserves = round(fcstV1['fcst'].sum(), 2)
+                output_forecast.markdown(
+                    f"##### Akaike Information Criterion (AIC): " + str(round(model_fit.aic, 2)))
 
-            gasReserves_ = f"{gasReserves:,}"
-            output_forecast.markdown(
-                f"<h1 style = 'text-align: center; color: black;'>{gasReserves_}</h1>", unsafe_allow_html=True)
+                testModelSummary = output_forecast.beta_expander(
+                    'Test Model Summary')
+                testModelSummary.write(
+                    model_fit.summary())
 
-            output_forecast.markdown("<hr/>", unsafe_allow_html=True)
+                output_forecast.markdown("<hr/>", unsafe_allow_html=True)
 
-            output_forecast.markdown(
-                f"#### EUR [Mcf]")
+                output_forecast.markdown(
+                    f"#### Forecast")
 
-            EUR = round(gasProduced + gasReserves, 2)
+                output_forecast.markdown(
+                    f"##### Akaike Information Criterion (AIC): " + str(round(model_fit_.aic, 2)))
 
-            EUR_ = f"{EUR:,}"
-            output_forecast.markdown(
-                f"<h1 style = 'text-align: center; color: black;'>{EUR_}</h1>", unsafe_allow_html=True)
+                forecastModelSummary = output_forecast.beta_expander(
+                    'Forecast Model Summary')
+                forecastModelSummary.write(
+                    model_fit_.summary())
 
-        else:
+            elif forecastModel_Type == 'Prophet':
+                output_forecast.markdown(
+                    f"### Test")
 
-            output_forecast.markdown(
-                f"#### Gas Cum Production [Mcf]")
+                output_forecast.markdown(
+                    f"#### Error")
 
-            gasProduced = round(data['Gas Production [Kcfd]'].sum(), 2)
-            gasProduced_ = f"{gasProduced:,}"
+                error = round(error, 2)
 
-            output_forecast.markdown(
-                f"<h1 style = 'text-align: center; color: black;'>{gasProduced}</h1>", unsafe_allow_html=True)
+                error_ = f"{error:,}"
 
-            output_forecast.markdown("<hr/>", unsafe_allow_html=True)
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
 
-            output_forecast.markdown(
-                f"#### Gas Reserves [Mcf] | Average")
+                output_forecast.markdown(
+                    f"### Production")
 
-            # gasReserves = round(fcst['fcst'].sum(), 2)
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
 
-            # gasReserves_ = f"{gasReserves:,}"
-            # output_forecast.markdown(
-            #     f"<h1 style = 'text-align: center; color: black;'>{gasReserves_}</h1>", unsafe_allow_html=True)
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
 
-            # output_forecast.markdown(
-            #     f"#### Gas Reserves [Mcf] | Upper")
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
 
-            # gasReserves_upper = round(fcst['fcst_upper'].sum(), 2)
+                output_forecast.markdown(
+                    f"### Forecast")
 
-            # gasReserves_upper = f"{gasReserves_upper:,}"
-            # output_forecast.markdown(
-            #     f"<h3 style = 'text-align: center; color: black;'>{gasReserves_upper}</h1>", unsafe_allow_html=True)
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
 
-            # output_forecast.markdown(
-            #     f"#### Gas Reserves [Mcf] | Lower")
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
 
-            # gasReserves_lower = round(fcst['fcst_lower'].sum(), 2)
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
 
-            # gasReserves_lower = f"{gasReserves_lower:,}"
-            # output_forecast.markdown(
-            #     f"<h3 style = 'text-align: center; color: black;'>{gasReserves_lower}</h1>", unsafe_allow_html=True)
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
 
-            # output_forecast.markdown("<hr/>", unsafe_allow_html=True)
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
 
-            # output_forecast.markdown(
-            #     f"#### EUR [Mcf]")
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
 
-            # EUR = round(gasProduced + gasReserves, 2)
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
 
-            # EUR_ = f"{EUR:,}"
-            # output_forecast.markdown(
-            #     f"<h1 style = 'text-align: center; color: black;'>{EUR_}</h1>", unsafe_allow_html=True)
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'ARIMA (Prophet)':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
+
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
+
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'SARIMA (Prophet)':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
+
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
+
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'LSTM':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
+
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
+
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'Linear':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
+
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
+
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'Quadratic':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
+
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
+
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'Holt-Winter':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+            elif forecastModel_Type == 'Bi-variate':
+                output_forecast.markdown(
+                    f"### Test")
+
+                output_forecast.markdown(
+                    f"#### Error")
+
+                error = round(error, 2)
+
+                error_ = f"{error:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{error_} [Kcfd]</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Production")
+
+                output_forecast.markdown(
+                    f"#### Gas Cum Production [Mcf]")
+
+                gasProduced_ = round(data_df['production'].sum(), 2)
+                gasProduced = f"{gasProduced_:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{gasProduced}</h3>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### Forecast")
+
+                gasForecast_ = round(fcst['fcst'].sum(), 2)
+                gasForecast = f"{gasForecast_:,}"
+
+                output_forecast.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander = st.beta_expander(
+                    'Forecast Boundaries')
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Upper Boundary)")
+
+                gasForecastUpper_ = round(fcst['fcst_upper'].sum(), 2)
+                gasForecastUpper = f"{gasForecastUpper_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastUpper}</h4>", unsafe_allow_html=True)
+
+                forecastBoundariesExpander.markdown(
+                    f"#### Forecast (Lower Boundary)")
+
+                gasForecastLower_ = round(fcst['fcst_lower'].sum(), 2)
+                gasForecastLower = f"{gasForecastLower_:,}"
+
+                forecastBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{gasForecastLower}</h4>", unsafe_allow_html=True)
+
+                output_forecast.markdown(
+                    f"### EUR")
+
+                EUR = round(gasProduced_ + gasForecast_, 2)
+                EUR_ = f"{EUR:,}"
+
+                output_forecast.markdown(
+                    f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
+
+                EURBoundariesExpander = st.beta_expander('EUR Boundaries')
+
+                EURBoundariesExpander.markdown(
+                    f"#### EUR (Upper Boundary)")
+
+                EURUpper_ = round(gasProduced_ + gasForecastUpper_, 2)
+                EURUpper = f"{EURUpper_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURUpper}</h4>", unsafe_allow_html=True)
+
+                EURBoundariesExpander.markdown(
+                    f"##### EUR (Lower Boundary)")
+
+                EURLower_ = round(gasProduced_ + gasForecastLower_, 2)
+                EURLower = f"{EURLower_:,}"
+
+                EURBoundariesExpander.markdown(
+                    f"<h4 style = 'text-align: center; color: black;'>{EURLower}</h4>", unsafe_allow_html=True)
