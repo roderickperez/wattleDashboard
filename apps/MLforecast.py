@@ -41,9 +41,6 @@ warnings.simplefilter('ignore')
 def app():
     st.markdown('# Production Forecast')
 
-    columns = ['Well Head Pressure [PSI]', 'Pressure Line [PSI]', 'DP in H2O', 'Casing Pressure [Psi]', 'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
-               'Current Uplift (14/64") [MCFD]', 'Temp Line [°F]', 'Heater Temperature [°F]', 'Orifice Plate', 'Gas Production [Kcfd]', 'After Opening to 12/64" Current Flowrate', 'Current Uplift (12/64") [MCFD]', 'Gas Comsuption [Kcfd]', 'Volumen Oil [Bbls]', 'Volumen Condensate [bls/d]', 'Volumen Water [bls/d]', 'Ambient Temperature [°F]', 'Tubing Head Temperature [°F]']
-
     def load_data():
 
         data = pd.read_csv(
@@ -53,9 +50,9 @@ def app():
         data.columns = ['Date', 'DP in H2O', 'Well Head Pressure [PSI]', 'Casing Pressure [Psi]', 'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
                         'Current Uplift (14/64") [MCFD]', 'Temp Line [°F]', 'Pressure Line [PSI]', 'Heater Temperature [°F]', 'Orifice Plate', 'Gas Production [Kcfd]', 'After Opening to 12/64" Current Flowrate', 'Current Uplift (12/64") [MCFD]', 'Gas Comsuption [Kcfd]', 'Volumen Oil [Bbls]', 'Volumen Condensate [bls/d]', 'Volumen Water [bls/d]', 'Ambient Temperature [°F]', 'Tubing Head Temperature [°F]',  'Well Name']
 
-        if forecastModel_Type == 'Bi-variate':
+        if moduleSelection == 'Forecast Bi-variate':
             data = data[data['Well Name'] == selected_well]
-            data = data[['Date', 'Gas Production [Kcfd]', variable_2]]
+            data = data[['Date', variable_1, variable_2]]
             data.reset_index(drop=True, inplace=True)
 
             return data
@@ -165,12 +162,12 @@ def app():
 
             #################################
             moduleSelection = forecast_params.radio(
-                'Forecast Model Type', ['Forecast', 'Hyperparameter tuning', 'Backtesting'])
+                'Forecast Model Type', ['Forecast Univariate', 'Forecast Bi-variate', 'Hyperparameter tuning', 'Backtesting'])
 
-            if moduleSelection == 'Forecast':
+            if moduleSelection == 'Forecast Univariate':
 
                 forecastModelType = [
-                    'Naive', 'ARIMA (Manual)', 'Prophet', 'ARIMA', 'SARIMA', 'LSTM', 'Linear', 'Quadratic', 'Holt-Winter', 'Theta', 'Bi-variate', 'Ensamble']
+                    'Naive', 'ARIMA (Manual)', 'Prophet', 'ARIMA', 'SARIMA', 'LSTM', 'Linear', 'Quadratic', 'Holt-Winter', 'Theta', 'Ensamble']
 
                 forecastModel_Type = forecast_params.selectbox(
                     'Forecast Model Type', forecastModelType)
@@ -1113,48 +1110,6 @@ def app():
 
                     # aggregate individual model results
                     m.aggregate()
-
-                elif forecastModel_Type == 'Bi-variate':
-
-                    variable_2 = st.selectbox("Select 2nd Variable", columns)
-
-                    st.write('Select Bi-variate Model')
-
-                    st.radio("Model", ['VAR'], help='VAR model is a multivariate extension of the univariate autoregressive (AR) model. It captures the linear interdependencies between multiple variables using a system of equations. Each variable depends not only on its own lagged values but also on the lagged values of other variables. ')
-
-                    ##################################
-
-                    # Data Preparation
-
-                    data = load_data()
-
-                    data_df = copy.deepcopy(data)
-
-                    data_df.rename(
-                        {'Date': 'time', 'Gas Production [Kcfd]': 'V1', variable_2: 'V2'}, axis=1, inplace=True)
-
-                    data_df['time'] = pd.to_datetime(data_df['time']).dt.date
-
-                    # # convert to TimeSeriesData object
-
-                    data_ts = TimeSeriesData(data_df)
-                    ##################################
-
-                    params = VARParams()
-                    m = VARModel(data_ts, params)
-
-                    #####################################
-                    # Fit model
-                    m.fit()
-
-                    #####################################
-                    # Forecast
-                    fcst = m.predict(steps=predictionPeriod)
-
-                    fcst_V1 = fcst['V1']
-                    fcstV1 = fcst_V1.to_dataframe()
-                    fcst_V2 = fcst['V2']
-                    fcstV2 = fcst_V2.to_dataframe()
 
                 elif forecastType == 'All Wells':
                     pass
@@ -3261,6 +3216,211 @@ def app():
                     forecast_plot.write(parameter_tuning_results_grid)
 
                     ###############################################
+
+            elif moduleSelection == 'Forecast Bi-variate':
+                columns1 = ['Gas Production [Kcfd]', 'Well Head Pressure [PSI]', 'Pressure Line [PSI]', 'DP in H2O', 'Casing Pressure [Psi]', 'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
+                            'Current Uplift (14/64") [MCFD]', 'Temp Line [°F]', 'Heater Temperature [°F]', 'Orifice Plate', 'After Opening to 12/64" Current Flowrate', 'Current Uplift (12/64") [MCFD]', 'Gas Comsuption [Kcfd]', 'Volumen Oil [Bbls]', 'Volumen Condensate [bls/d]', 'Volumen Water [bls/d]', 'Ambient Temperature [°F]', 'Tubing Head Temperature [°F]']
+
+                columns2 = ['Well Head Pressure [PSI]', 'Pressure Line [PSI]', 'DP in H2O', 'Casing Pressure [Psi]', 'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
+                            'Current Uplift (14/64") [MCFD]', 'Temp Line [°F]', 'Heater Temperature [°F]', 'Orifice Plate', 'Gas Production [Kcfd]', 'After Opening to 12/64" Current Flowrate', 'Current Uplift (12/64") [MCFD]', 'Gas Comsuption [Kcfd]', 'Volumen Oil [Bbls]', 'Volumen Condensate [bls/d]', 'Volumen Water [bls/d]', 'Ambient Temperature [°F]', 'Tubing Head Temperature [°F]']
+
+                variable_1 = st.selectbox("1st Variable:", columns1)
+
+                variable_2 = st.selectbox("2nd Variable:", columns2)
+
+                ##################################
+
+                # Data Preparation
+
+                data = load_data()
+
+                data_df = copy.deepcopy(data)
+
+                data_df.rename(
+                    {'Date': 'time', variable_1: 'V1', variable_2: 'V2'}, axis=1, inplace=True)
+
+                data_df['time'] = pd.to_datetime(
+                    data_df.time, format='%m/%d/%Y')
+
+                #################################
+
+                if (seasonalityType == 'Daily'):
+                    seasonalityPeriod = 1
+                elif (seasonalityType == 'Monthly'):
+                    seasonalityPeriod = 30
+                elif (seasonalityType == 'Yearly'):
+                    seasonalityPeriod = 365
+                else:
+                    seasonalityPeriod = seriesParameters.slider('Period:',
+                                                                min_value=1, value=30, max_value=365)
+                #############################################
+
+                dataSeasonal_V1 = seasonal_decompose(
+                    data_df['V1'], model=seasonalityType, period=seasonalityPeriod)
+
+                V1 = pd.DataFrame(dataSeasonal_V1.trend)
+
+                V1.rename(columns={'trend': 'V1'}, inplace=True)
+
+                dataSeasonal_V2 = seasonal_decompose(
+                    data_df['V2'], model=seasonalityType, period=seasonalityPeriod)
+
+                V2 = pd.DataFrame(dataSeasonal_V2.trend)
+
+                V2.rename(columns={'trend': 'V2'}, inplace=True)
+
+                dataSeasonal = pd.concat(
+                    [V1, V2], axis=1)
+
+                #################################
+
+                # Forecast Parameters
+                total_days = len(data_df['time'])
+
+                test_days = forecastParameters.slider('Test (days):',
+                                                      min_value=0, value=2030, max_value=total_days)
+
+                train_days = forecastParameters.slider('Train (days):',
+                                                       min_value=0, value=total_days-test_days, max_value=total_days)
+
+                predictionPeriod = forecastParameters.slider(
+                    'Predict (days):', min_value=1, value=1825, max_value=3650)
+
+                train_first = data_df['time'].iloc[0].date()
+                train_end = data_df['time'].iloc[train_days].date()
+
+                test_first = data_df['time'].iloc[train_days+1].date()
+                test_end = data_df['time'].iloc[-1].date()
+
+                forecastParameters.markdown('### Train')
+                train_start_date = forecastParameters.date_input(
+                    'Start date', train_first)
+                train_end_date = forecastParameters.date_input(
+                    'End date', train_end)
+
+                if train_start_date > train_end_date:
+                    forecastParameters.error(
+                        'Error: End date must fall after start date.')
+
+                forecastParameters.markdown('### Test')
+
+                test_start_date = forecastParameters.date_input(
+                    'Start date ', test_first)
+                test_end_date = forecastParameters.date_input(
+                    'End date ', test_end)
+
+                if test_start_date > test_end_date:
+                    forecastParameters.error(
+                        'Error: End date must fall after start date.')
+
+                #############################################
+                data_df_ = pd.concat(
+                    [data_df['time'].shift(15), dataSeasonal], axis=1)
+
+                data_df_.columns = ['time', 'V1', 'V2']
+
+                forecast_plot.write(data_df_)
+
+                #################################
+                # Check if there is any null value in the data
+
+                nullTest = data_df_.isnull(
+                ).values.any()
+
+                if (nullTest == True):
+                    data_df_ = data_df_.dropna()
+
+                forecast_plot.write(data_df_)
+
+                #################################
+                # Train - Test Split
+
+                train_ts = data_df_[0:train_days]
+                test_ts = data_df_[train_days+1:]
+
+                #################################
+
+                # # Forecast Parameters
+                total_days = len(data_df['time'])
+
+                test_days = forecastParameters.slider('Test (days):',
+                                                      min_value=0, value=730, max_value=total_days)
+
+                train_days = forecastParameters.slider('Train (days):',
+                                                       min_value=0, value=total_days-test_days, max_value=total_days)
+
+                predictionPeriod = forecastParameters.slider(
+                    'Predict (days):', min_value=1, value=1825, max_value=3650)
+
+                train_first = data_df['time'].iloc[0].date()
+                train_end = data_df['time'].iloc[train_days].date()
+
+                test_first = data_df['time'].iloc[train_days+1].date()
+                test_end = data_df['time'].iloc[-1].date()
+
+                forecastParameters.markdown('### Train')
+                train_start_date = forecastParameters.date_input(
+                    'Start date', train_first)
+                train_end_date = forecastParameters.date_input(
+                    'End date', train_end)
+
+                if train_start_date > train_end_date:
+                    forecastParameters.error(
+                        'Error: End date must fall after start date.')
+
+                forecastParameters.markdown('### Test')
+
+                test_start_date = forecastParameters.date_input(
+                    'Start date ', test_first)
+                test_end_date = forecastParameters.date_input(
+                    'End date ', test_end)
+
+                if test_start_date > test_end_date:
+                    forecastParameters.error(
+                        'Error: End date must fall after start date.')
+
+                # #################################
+
+                # forecast_plot.write(data_df)
+
+                # data_df_ = pd.concat(
+                #     [data_df['time'], dataSeasonal.trend], axis=1)
+
+                # data_df_.columns = ['time', 'V1']
+
+                # #################################
+                # # Check if there is any null value in the data
+
+                # nullTest = data_df_['V1'].isnull(
+                # ).values.any()
+
+                # if (nullTest == True):
+                #     data_df['V1'] = data_df_['V1'].fillna(
+                #         0)
+
+                # forecast_plot.write(data_df_)
+
+                #################################
+                # # convert to TimeSeriesData object
+
+                # data_ts = TimeSeriesData(data_df)
+                # ##################################
+
+                # params = VARParams()
+                # m = VARModel(data_ts, params)
+
+                # #####################################
+                # # Fit model
+                # m.fit()
+
+                # #####################################
+                # # Forecast
+                # fcst = m.predict(steps=predictionPeriod)
+
+                # fcst_V1 = fcst['V1']
+                # fcstV1 = fcst_V1.to_dataframe()
+                # fcst_V2 = fcst['V2']
+                # fcstV2 = fcst_V2.to_dataframe()
 
             elif moduleSelection == 'Backtesting':
 
