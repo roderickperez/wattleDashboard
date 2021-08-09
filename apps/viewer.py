@@ -4,256 +4,206 @@ import streamlit as st
 # import pandas as pd
 # import matplotlib.pyplot as plt
 # from plotly import graph_objs as go
-# # import welleng as we
-# # import folium
-# # from streamlit_folium import folium_static
+# import welleng as we
+import folium
+from streamlit_folium import folium_static
 # # import ee
 # # import geemap.eefolium as geemap
-
-# surfaceList = ['', 'Real', 'Unconformity', 'La Luna', 'El Salto', 'Rosablanca']
 
 
 def app():
 
-    # @st.cache
-    # def loadSurface():
-    #     surfacedata = pd.read_csv(
-    #         'data/surfaces/surfaces.csv')
-
-    #     surfacedata.columns = ['x', 'y', 'z', 'surface']
-
-    #     return surfacedata
-
-    #     def loadWellTrajectory():
-    #         trajectorydata = pd.read_csv(
-    #             'data/wellTrajectory/trajectory.csv')
-
-    #         trajectorydata.columns = ['md', 'x', 'y', 'well']
-
-    #         return trajectorydata
-
     st.markdown('# Viewer')
 
-    # viewer_params, viewer_plot = st.beta_columns(
-    #     (1, 4))
+    viewer_params, viewer_plot = st.beta_columns(
+        (1, 4))
 
-    # with viewer_params:
-    #     viewer_Mode = ['Map View', '3D View']
+    with viewer_params:
+        viewer_Mode = ['Map View', '3D View']
 
-    #     viewerMode = st.radio(
-    #         'Viewer Mode', viewer_Mode)
+    with viewer_plot:
 
-    #     surfacedata = loadSurface()
+        m = folium.Map(location=[8.3426, -73.6827],
+                       zoom_start=13, tiles="cartodbpositron")
 
-    #     real = surfacedata[surfacedata['surface'] == "Real"]
-    #     real = real.drop(['surface'], axis=1)
-    #     real_x = real['x'].values
-    #     real_y = real['y'].values
-    #     real_z = real['z'].values
+        # m = folium.Map(tiles="cartodbpositron")
 
-    #     pts = 1000000  # Input the desired number of points here
+        folium.CircleMarker(
+            location=[8.33351075, -73.70513353],
+            popup="Aguachica-2",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     [x, y] = np.meshgrid(np.linspace(np.min(real_y), np.max(real_y), np.sqrt(
-    #         pts)), np.linspace(np.min(real_x), np.max(real_x), np.sqrt(pts)))
-    #     z = griddata((real_y, real_x), real_z, (x, y), method='linear')
+        folium.CircleMarker(
+            location=[8.33494223, -73.67233715],
+            popup="Crisol-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     x = np.matrix.flatten(x)  # Gridded longitude
-    #     y = np.matrix.flatten(y)  # Gridded latitude
-    #     z = np.matrix.flatten(z)  # Gridded elevation
+        folium.CircleMarker(
+            location=[8.32586938, -73.68280489],
+            popup="Crisol-2",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     fig = go.Figure(data=[go.Surface(z=z, x=x, y=y)])
-    #     viewer_plot.plotly_chart(fig)
+        folium.CircleMarker(
+            location=[8.35850098, -73.65913566],
+            popup="Crisol-3",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     ###############################
+        folium.CircleMarker(
+            location=[8.35838529, -73.67842751],
+            popup="Norean-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     Unconformity = surfacedata[surfacedata['surface']
-    #                                == "Unconformity"]
-    #     Unconformity = Unconformity.drop(['surface'], axis=1)
+        folium.CircleMarker(
+            location=[8.33577781, -73.70499465],
+            popup="Pital-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     laLuna = surfacedata[surfacedata['surface'] == "La Luna"]
-    #     laLuna = laLuna.drop(['surface'], axis=1)
+        folium.CircleMarker(
+            location=[8.36888915, -73.6397439],
+            popup="Eucalipto-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     elSalto = surfacedata[surfacedata['surface'] == "El Salto"]
-    #     elSalto = elSalto.drop(['surface'], axis=1)
+        folium.CircleMarker(
+            location=[8.34412715, -73.69961458],
+            popup="Reposo-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-    #     Rosablanca = surfacedata[surfacedata['surface']
-    #                              == "Rosablanca"]
-    #     Rosablanca = Rosablanca.drop(['surface'], axis=1)
+        folium.CircleMarker(
+            location=[8.32381737, -73.66540851],
+            popup="Toposi-2",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
+        folium.CircleMarker(
+            location=[8.33315358, -73.67215507],
+            popup="Caramelo-2",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#         if viewerMode == 'Map View':
-#             pass
+        folium.CircleMarker(
+            location=[8.33309645, -73.67208214],
+            popup="Caramelo-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#         if viewerMode == '3D View':
+        folium.CircleMarker(
+            location=[8.33292278, -73.67201223],
+            popup="Caramelo-3",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#             wellTrajectoryCheck = viewer_params.checkbox(
-#                 'Well Trajectory', value=False)
+        folium.CircleMarker(
+            location=[8.33288558, -73.6719726],
+            popup="Caramelo-5",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#             if wellTrajectoryCheck == True:
+        folium.CircleMarker(
+            location=[8.35597644, -73.68249159],
+            popup="Norean-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#                 trajectorydata = loadWellTrajectory()
+        folium.CircleMarker(
+            location=[8.34973363, -73.65764591],
+            popup="Preludio-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#                 aguachica_2 = trajectorydata[trajectorydata['well']
-#                                              == "Aguachica-2"]
+        folium.CircleMarker(
+            location=[8.34545998, -73.66178435],
+            popup="La Estancia-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#                 with viewer_plot:
-#                     viewer_plot.write(aguachica_2)
+        folium.CircleMarker(
+            location=[8.34545998, -73.66178435],
+            popup="La Estancia-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#                     fig = go.Figure()
-#                     fig.add_trace(go.Scatter3d(
-#                         x=[1041013, 1041013], y=[1413348, 1413348], z=[0, 5750], mode='lines'))
+        folium.CircleMarker(
+            location=[8.34022764, -73.65030377],
+            popup="Bandera-1",
+            radius=10,
+            color="#3186cc",
+            fill=True,
+            fill_color="#3186cc"
+        ).add_to(m)
 
-#                     #fig.update_layout(scene=dict(zaxis=dict(range=[6000, 0])))
+        m.add_child(folium.LatLngPopup())
 
-#                     viewer_plot.plotly_chart(fig)
+        ANHMapaTierras = 'data/surfaces/shapeFiles/Tierras_2021_06_01.json'
+        ANHSeismic = 'data/surfaces/shapeFiles/Sísmica_3D.json'
 
-#             else:
-#                 pass
+        folium.GeoJson(ANHMapaTierras, name="ANH Mapa de Tierras").add_to(m)
+        folium.GeoJson(ANHSeismic, name="ANH 3D Seismic").add_to(m)
 
-#             viewer_params.checkbox('Well Tops', value=False)
-#             viewer_params.checkbox('Faults', value=False)
+        # folium.TopoJson(
+        #     json.loads(requests.get(VMM-1_TopoJson).text),
+        #     "objects.antarctic_ice_shelf",
+        #     name="topojson",
+        # ).add_to(m)
 
-#             # if surface:
-#             # surfacedata = loadSurface()
+        folium.LayerControl().add_to(m)
 
-
-#             # surface = st.checkbox('Surface', value=True)
-#             # st.multiselect('Select Surface: ', surfaceList)
-
-#             # realOpacity = st.slider(
-#             #     'Opacity:', min_value=0.0, value=0.9, max_value=1.0)
-#             # realScaleShow = st.radio('Show Scale', [
-#             #     True, False])
-
-#             # with viewer_plot:
-#             #     st.write(real)
-#             #     x = real['x'].to_numpy()
-#             #     y = real['y'].to_numpy()
-#             #     z = real['z'].to_numpy()
-
-#             #     st.write(type(x))
-#             #     st.write(x)
-#             #     st.write(type(y))
-#             #     st.write(type(z))
-
-#             #     fig = go.Figure()
-#             #     fig.add_trace(go.Surface(
-#             #         z=z, x=x, y=y, showscale=realScaleShow, opacity=realOpacity))
-
-#             #     viewer_plot.plotly_chart(fig)
-
-#     # with viewer_plot:
-#     #     viewer_plot.write(trajectorydata)
-#         # # st.set_page_config(layout ="wide")
-
-#         # m = folium.Map(location=[8.30844, -73.6166], zoom_start=12)
-
-#         # folium.Marker(
-#         #     location=[8.33351075, -73.70513353],
-#         #     popup="AGUACHICA-2",
-#         #     icon=folium.Icon(color="red", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33494223, -73.67233715],
-#         #     popup="CRISOL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.32586938, -73.68280489],
-#         #     popup="CRISOL-2",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.35850098, -73.65913566],
-#         #     popup="CRISOL-3",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.35838529, -73.67842751],
-#         #     popup="NOREAN-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.31833502, -73.70499465],
-#         #     popup="PITAL-2",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PRELUDIO-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium.Marker(
-#         #     location=[8.33577781, -73.70499465],
-#         #     popup="PITAL-1",
-#         #     icon=folium.Icon(color="green", icon="info-sign"),
-#         # ).add_to(m)
-
-#         # folium_static(m)
+        folium_static(m, width=1400, height=700)

@@ -13,6 +13,10 @@ from plotly import graph_objs as go
 import matplotlib.pyplot as plt
 import warnings
 
+# Kats Model Import
+from kats.consts import TimeSeriesData
+from kats.tsfeatures.tsfeatures import TsFeatures
+
 warnings.simplefilter('ignore')
 
 
@@ -341,12 +345,168 @@ def app():
                 plot_Type = production_params.radio('Plot Type', plotType)
 
                 if (plot_Type == 'Full'):
+                    #################################
+                    production_params.markdown('#### Data')
+
+                    seriesParameters = production_params.beta_expander(
+                        'Seasonality')
+
+                    seasonalityMode = ['Daily', 'Monthly', 'Yearly', 'Custom']
+
+                    seasonalityType = seriesParameters.radio(
+                        'Mode', seasonalityMode, index=1)
+
+                    #############################################
+
+                    production_params.markdown('#### Range')
+
+                    forecastParameters = production_params.beta_expander(
+                        'Dates')
+
+                    #############################################
 
                     with production_plot:
 
+                        # production_plot.write(data)
+
+                        data_df = copy.deepcopy(data)
+
+                        data_df = data_df[['Date', plot_selectionVariable]]
+
+                        data_df.rename(
+                            {'Date': 'time', 'Gas Production [Kcfd]': 'production'}, axis=1, inplace=True)
+
+                        data_df['time'] = pd.to_datetime(
+                            data_df.time, format='%Y/%m/%d')
+
+                        #################################
+                        # Check if there is any null value in the data
+
+                        nullTest = data_df['production'].isnull(
+                        ).values.any()
+
+                        if (nullTest == True):
+                            data_df['production'] = data_df['production'].fillna(
+                                0)
+
+                        #################################
+
+                        if (seasonalityType == 'Daily'):
+                            seasonalityPeriod = 1
+                        elif (seasonalityType == 'Monthly'):
+                            seasonalityPeriod = 30
+                        elif (seasonalityType == 'Yearly'):
+                            seasonalityPeriod = 365
+                        else:
+                            seasonalityPeriod = seriesParameters.slider('Period:',
+                                                                        min_value=1, value=30, max_value=365)
+                        #############################################
+
+                        dataSeasonal = seasonal_decompose(
+                            data_df['production'], model=seasonalityType, period=seasonalityPeriod)
+
+                        #################################
+
+                        date_first = data_df['time'].iloc[0].date()
+
+                        date_end = data_df['time'].iloc[-1].date()
+
+                        start_date = forecastParameters.date_input(
+                            'Start date', date_first)
+
+                        end_date = forecastParameters.date_input(
+                            'End date ', date_end)
+
+                        if start_date > end_date:
+                            forecastParameters.error(
+                                'Error: End date must fall after start date.')
+
+                        ############################################
+
+                        # production_plot.write(data_df)
+
+                        # production_plot.write(start_date)
+
+                        start_date_ = pd.to_datetime(start_date)
+                        end_date_ = pd.to_datetime(end_date)
+
+                        # production_plot.write(start_date_)
+
+                        start_date_index = data_df[data_df['time']
+                                                   == start_date_].index[0]
+
+                        end_date_index = data_df[data_df['time']
+                                                 == end_date_].index[0]
+
+                        # production_plot.write(start_date_index)
+
+                        ############################################
+
+                        data_df_ = pd.concat(
+                            [data_df['time'], dataSeasonal.trend], axis=1)
+
+                        data_df_.columns = ['time', 'production']
+
+                        # production_plot.write(data_df)
+
+                        #################################
+                        # Check if there is any null value in the data
+
+                        nullTest = data_df_['production'].isnull(
+                        ).values.any()
+
+                        # Delete rows with NA values
+                        if (nullTest == True):
+                            data_df_ = data_df_.dropna()
+
+                        # production_plot.write(data_df_)
+                        #################################
+
+                        # Train - Test Split
+
+                        ts = data_df_[start_date_index:end_date_index]
+                        # test_ts = data_df_[train_days+1:]
+
+                        # production_plot.write(ts)
+
+                        #################################
+
+                        # Convert to Prophet Time Series format
+
+                        ts_ = TimeSeriesData(ts)
+
+                        #################################
+
+                        # Initiate feature extraction class
+
+                        tsFeatures = TsFeatures()
+
+                        features_ts = tsFeatures.transform(ts_)
+
                         fig = go.Figure()
+
                         fig.add_trace(go.Scatter(
-                            x=data['Date'], y=data[plot_selectionVariable]))
+                            x=data_df['time'], y=data_df['production'], name='Production', line=dict(color='gray', width=0.5)))
+
+                        fig.add_trace(go.Scatter(
+                            x=data_df_['time'], y=data_df_['production'], name='Trend', line=dict(color='red')))
+
+                        fig.add_vrect(x0=start_date, x1=end_date,
+                                      line_width=0, fillcolor="red", opacity=0.05)
+                        # fig.add_vrect(x0=test_start_date, x1=test_end_date,
+                        #               line_width=0, fillcolor="green", opacity=0.05)
+
+                        fig.add_vline(x=start_date,  line_width=1,
+                                      line_dash="dash", line_color="black")
+                        fig.add_vline(x=end_date,  line_width=1,
+                                      line_dash="dash", line_color="red")
+
+                        # fig.add_vline(x=test_start_date,  line_width=1,
+                        #               line_dash="dash", line_color="green")
+
+                        # fig.add_vline(x=test_end_date,  line_width=1,
+                        #               line_dash="dash", line_color="green")
+
                         fig.layout.update(xaxis_rangeslider_visible=True)
 
                         fig.update_layout(legend=dict(
@@ -373,10 +533,34 @@ def app():
 
                     with summary_statistics:
                         summary_statistics.markdown('## Summary')
+
+                        # summary_statistics.write(ts)
+
+                        # summary_statistics.write(ts_)
+
                         summaryExpander = summary_statistics.beta_expander(
-                            'Statistics')
-                        summaryExpander.write(
+                            'Full')
+                        summaryExpander.table(
                             data[plot_selectionVariable].describe())
+
+                        # summaryExpander = summary_statistics.beta_expander(
+                        #     'Selected Range')
+                        # summaryExpander.write(
+                        #     data[plot_selectionVariable].describe())
+
+                        summaryExpander = summary_statistics.beta_expander(
+                            'Selected Range Features')
+
+                        # summaryExpander.write(type(features_ts))
+
+                        data_features_ts = pd.DataFrame(
+                            list(features_ts.items()))
+
+                        data_features_ts.columns = ['index', 'values']
+
+                        data_features_ts.set_index('index', inplace=True)
+
+                        summaryExpander.write(data_features_ts)
 
                 elif (plot_Type == 'Decomposition'):
 

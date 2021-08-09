@@ -40,8 +40,8 @@ app.add_app("Economics", economics.app)
 # The main app
 app.run()
 
-st.sidebar.write("Version: 0.1.0")
-st.sidebar.write("Last Update: August, 4th, 2021")
+st.sidebar.write("Version: 0.1.2")
+st.sidebar.write("Last Update: August, 9th, 2021")
 
 st.sidebar.markdown("### Information")
 
