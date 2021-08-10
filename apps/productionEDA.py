@@ -624,7 +624,7 @@ def app():
                             fig = go.Figure()
 
                             fig = make_subplots(
-                                rows=1, cols=2, column_widths=[0.7, 0.3])
+                                rows=1, cols=2, column_widths=[0.6, 0.3])
 
                             fig.add_trace(go.Scatter(
                                 x=data_df['time'], y=data_df[variable_1], name=variable_1), row=1, col=1)
@@ -644,7 +644,7 @@ def app():
                             fig.update_layout(legend=dict(
                                 orientation="h",
                             ),
-                                # showlegend=False,
+                                showlegend=False,
                                 autosize=True,
                                 width=1500,
                                 height=700,
@@ -682,7 +682,7 @@ def app():
                             fig = go.Figure()
 
                             fig = make_subplots(
-                                rows=1, cols=2, column_widths=[0.7, 0.3])
+                                rows=1, cols=2, column_widths=[0.6, 0.3])
 
                             fig.add_trace(go.Scatter(
                                 x=data_df['time'], y=data_df[variable_1], name=variable_1), row=1, col=1)
@@ -696,12 +696,13 @@ def app():
                                           line_dash="dash", line_color="red", row=1, col=1)
 
                             fig.add_trace(go.Scatter(
-                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color='blue', size=(data_df[variable_3]/radio))))
+                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color='blue', size=(data_df[variable_3]/radio))),
+                                row=1, col=2)
 
                             fig.update_layout(legend=dict(
                                 orientation="h",
                             ),
-                                # showlegend=False,
+                                showlegend=False,
                                 autosize=True,
                                 width=1500,
                                 height=700,
@@ -744,7 +745,7 @@ def app():
                             fig = go.Figure()
 
                             fig = make_subplots(
-                                rows=1, cols=2, column_widths=[0.7, 0.3])
+                                rows=1, cols=2, column_widths=[0.6, 0.3])
 
                             fig.add_trace(go.Scatter(
                                 x=data_df['time'], y=data_df[variable_1], name=variable_1), row=1, col=1)
@@ -758,12 +759,13 @@ def app():
                                           line_dash="dash", line_color="red", row=1, col=1)
 
                             fig.add_trace(go.Scatter(
-                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color=data_df[variable_4], size=(data_df[variable_3]/radio))))
+                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color=data_df[variable_4], size=(data_df[variable_3]/radio))),
+                                row=1, col=2)
 
                             fig.update_layout(legend=dict(
                                 orientation="h",
                             ),
-                                # showlegend=False,
+                                showlegend=False,
                                 autosize=True,
                                 width=1500,
                                 height=700,
