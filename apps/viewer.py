@@ -21,7 +21,7 @@ def app():
     with viewer_params:
         viewer_Mode = ['Map View', '3D View']
 
-        viewerMode = st.radio('Mode', viewer_Mode)
+        viewerMode = viewer_params.radio('Mode', viewer_Mode)
 
         mapSettingExpander = viewer_params.beta_expander('Map Settings')
 
@@ -33,10 +33,12 @@ def app():
             m = folium.Map(location=[8.3426, -73.6827],
                            zoom_start=zoom, tiles="cartodbpositron")
 
-            showObject = st.multiselect(
+            showObject = viewer_params.multiselect(
                 'Object', ['Wells', 'Seismic Polygon', 'Surfaces'], default=['Wells', 'Seismic Polygon'])
 
             if 'Wells' in showObject:
+
+                viewer_params.markdown('#### Wells')
 
                 wellsSettingExpander = viewer_params.beta_expander(
                     'Well Settings')
@@ -216,6 +218,7 @@ def app():
                     ).add_to(m)
 
             if 'Seismic Polygon' in showObject:
+                viewer_params.markdown('#### Polygons')
 
                 polygonSettingExpander = viewer_params.beta_expander(
                     'Polygon Settings')
@@ -242,23 +245,24 @@ def app():
                                style_function=lambda x: style).add_to(m).add_to(m)
 
             if 'Surfaces' in showObject:
+                viewer_params.markdown('#### Surfaces')
 
                 surfacesSettingExpander = viewer_params.beta_expander(
-                    'Polygon Settings')
+                    'Surface Settings')
 
                 opacity = surfacesSettingExpander.slider('Surface Opacity:',
                                                          min_value=0.0, value=0.6, max_value=1.0)
 
-                surfaces = viewer_params.selectbox('Surfaces:', [
-                    'Real', 'Unconformity', 'La Luna', 'El Salto', 'Tablazo', 'Rosa blanca'])
+                surfaces = viewer_params.multiselect('Surfaces:', [
+                    'Real', 'Unconformity', 'La Luna', 'El Salto', 'Tablazo', 'Rosa Blanca', 'Rosa Blanca (Thin)'])
 
                 if 'Real' in surfaces:
 
-                    real = r'data\surfaces\Real.png'
+                    Real = r'data\surfaces\Real.png'
 
-                    img_RosaBlanca = folium.raster_layers.ImageOverlay(
+                    img_Real = folium.raster_layers.ImageOverlay(
                         name="Real",
-                        image=real,
+                        image=Real,
                         bounds=[[8.247096, -73.748204],
                                 [8.421736, -73.584173]],
                         opacity=opacity,
@@ -266,15 +270,15 @@ def app():
                         cross_origin=False,
                         zindex=1)
 
-                    img_RosaBlanca.add_to(m)
+                    img_Real.add_to(m)
 
                 if 'Unconformity' in surfaces:
 
-                    unconformity = r'data\surfaces\unconformity.png'
+                    Unconformity = r'data\surfaces\unconformity.png'
 
-                    img_RosaBlanca = folium.raster_layers.ImageOverlay(
+                    img_Unconformity = folium.raster_layers.ImageOverlay(
                         name="Unconformity",
-                        image=unconformity,
+                        image=Unconformity,
                         bounds=[[8.247096, -73.748204],
                                 [8.421736, -73.584173]],
                         opacity=opacity,
@@ -282,13 +286,13 @@ def app():
                         cross_origin=False,
                         zindex=1)
 
-                    img_RosaBlanca.add_to(m)
+                    img_Unconformity.add_to(m)
 
                 if 'La Luna' in surfaces:
 
                     LaLuna = r'data\surfaces\LaLuna.png'
 
-                    img_RosaBlanca = folium.raster_layers.ImageOverlay(
+                    img_LaLuna = folium.raster_layers.ImageOverlay(
                         name="La Luna",
                         image=LaLuna,
                         bounds=[[8.247096, -73.748204],
@@ -298,13 +302,13 @@ def app():
                         cross_origin=False,
                         zindex=1)
 
-                    img_RosaBlanca.add_to(m)
+                    img_LaLuna.add_to(m)
 
                 if 'El Salto' in surfaces:
 
                     ElSalto = r'data\surfaces\ElSalto.png'
 
-                    img_RosaBlanca = folium.raster_layers.ImageOverlay(
+                    img_ElSalto = folium.raster_layers.ImageOverlay(
                         name="El Salto",
                         image=ElSalto,
                         bounds=[[8.247096, -73.748204],
@@ -314,13 +318,13 @@ def app():
                         cross_origin=False,
                         zindex=1)
 
-                    img_RosaBlanca.add_to(m)
+                    img_ElSalto.add_to(m)
 
                 if 'Tablazo' in surfaces:
 
                     Tablazo = r'data\surfaces\Tablazo.png'
 
-                    img_RosaBlanca = folium.raster_layers.ImageOverlay(
+                    img_Tablazo = folium.raster_layers.ImageOverlay(
                         name="Tablazo",
                         image=Tablazo,
                         bounds=[[8.247096, -73.748204],
@@ -330,9 +334,9 @@ def app():
                         cross_origin=False,
                         zindex=1)
 
-                    img_RosaBlanca.add_to(m)
+                    img_Tablazo.add_to(m)
 
-                if 'Rosa blanca' in surfaces:
+                if 'Rosa Blanca' in surfaces:
 
                     rosaBlanca = r'data\surfaces\RosaBlanca.png'
 
@@ -347,6 +351,22 @@ def app():
                         zindex=1)
 
                     img_RosaBlanca.add_to(m)
+
+                if 'Rosa Blanca (Thin)' in surfaces:
+
+                    rosaBlancaThin = r'data\surfaces\RosaBlancaFaultThin.png'
+
+                    img_RosaBlancaThin = folium.raster_layers.ImageOverlay(
+                        name="Rosa Blanca (Thin)",
+                        image=rosaBlancaThin,
+                        bounds=[[8.247096, -73.748204],
+                                [8.421736, -73.584173]],
+                        opacity=opacity,
+                        interactive=True,
+                        cross_origin=False,
+                        zindex=1)
+
+                    img_RosaBlancaThin.add_to(m)
 
             folium.LayerControl().add_to(m)
 
