@@ -1736,22 +1736,6 @@ def app():
                     fig.add_trace(go.Scatter(
                         x=fcstV2['time'], y=fcstV2['fcst_lower'], name='Forecast (lower)', fill='tonexty', mode='none'), row=2, col=1)
 
-                    # fig.add_trace(go.Scatter(
-                    #     x=fcstV2['time'], y=fcstV2['fcst'], name=variable_2), row=2, col=1)
-
-                    # fig.add_trace(go.Scatter(
-                    #     x=fcstV2['time'], y=fcstV2['fcst_upper'], name='Forecast (Upper)', fill=None,
-                    #     line=dict(color='red', width=0.2)), row=2, col=1)
-
-                    # fig.add_trace(go.Scatter(
-                    #     x=fcstV2['time'], y=fcstV2['fcst_lower'], name='Forecast (Lower)', fill='tonexty', fillcolor='rgba(0, 255, 247, 0.1)',
-                    #     line=dict(color='red', width=0.2)), row=2, col=1)
-
-                    # fig.add_hline(y=economicLimit,  line_width=1,
-                    #               line_dash="dash", line_color="black", row=1, col=1)
-
-                    # fig.update_layout(width=1300, height=700)
-
                     fig.add_vrect(x0=train_ts['time'].iloc[0].date(), x1=train_ts['time'].iloc[-1].date(),
                                   line_width=0, fillcolor="red", opacity=0.05)
                     fig.add_vrect(x0=test_ts['time'].iloc[0].date(), x1=test_ts['time'].iloc[-1].date(),

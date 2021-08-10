@@ -16,6 +16,7 @@ import warnings
 # Kats Model Import
 from kats.consts import TimeSeriesData
 from kats.tsfeatures.tsfeatures import TsFeatures
+from traitlets.traitlets import default
 
 warnings.simplefilter('ignore')
 
@@ -340,7 +341,7 @@ def app():
                 'Visualization Type', visualizationType)
 
             if (visualization_Type == 'Visualization'):
-                plotType = ['Full', 'Decomposition']
+                plotType = ['Full', 'Crossplot', 'Decomposition']
 
                 plot_Type = production_params.radio('Plot Type', plotType)
 
@@ -562,6 +563,222 @@ def app():
 
                         summaryExpander.write(data_features_ts)
 
+                elif (plot_Type == 'Crossplot'):
+
+                    data = load_data()
+
+                    data_df = copy.deepcopy(data)
+
+                    data_df['time'] = pd.to_datetime(
+                        data_df.Date, format='%m/%d/%Y')
+
+                    datesParameters = production_params.beta_expander(
+                        'Dates')
+
+                    crossplotParameters = production_params.beta_expander(
+                        'Crossplot Parameters')
+
+                    crossplot_Parameters = crossplotParameters.radio(
+                        'Number of variables', [2, 3, 4])
+
+                    date_first = data_df['time'].iloc[0].date()
+
+                    date_end = data_df['time'].iloc[-1].date()
+
+                    start_date = datesParameters.date_input(
+                        'Start date', date_first)
+
+                    end_date = datesParameters.date_input(
+                        'End date ', date_end)
+
+                    if start_date > end_date:
+                        datesParameters.error(
+                            'Error: End date must fall after start date.')
+
+                    start_date_ = pd.to_datetime(start_date)
+                    end_date_ = pd.to_datetime(end_date)
+
+                    start_date_index = data_df[data_df['time']
+                                               == start_date_].index[0]
+
+                    end_date_index = data_df[data_df['time']
+                                             == end_date_].index[0]
+
+                    ############ Data Loading ############
+
+                    # production_plot.write(data_df)
+
+                    if (crossplot_Parameters == 2):
+
+                        variable_1 = crossplotParameters.selectbox(
+                            "1st Variable:", columns, help='X-axis.')
+
+                        variable_2 = crossplotParameters.selectbox(
+                            "2nd Variable:", columns, help='Y-axis.')
+
+                        radio = crossplotParameters.slider(
+                            'Bubble Size', min_value=1, value=2, max_value=10)
+
+                        with production_plot:
+
+                            fig = go.Figure()
+
+                            fig = make_subplots(
+                                rows=1, cols=2, column_widths=[0.7, 0.3])
+
+                            fig.add_trace(go.Scatter(
+                                x=data_df['time'], y=data_df[variable_1], name=variable_1), row=1, col=1)
+
+                            fig.add_vrect(x0=start_date_, x1=end_date_,
+                                          line_width=0, fillcolor="red", opacity=0.05)
+
+                            fig.add_vline(x=start_date_,  line_width=1,
+                                          line_dash="dash", line_color="black", row=1, col=1)
+                            fig.add_vline(x=end_date_,  line_width=1,
+                                          line_dash="dash", line_color="red", row=1, col=1)
+
+                            fig.add_trace(go.Scatter(
+                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color='blue', size=radio)),
+                                row=1, col=2)
+
+                            fig.update_layout(legend=dict(
+                                orientation="h",
+                            ),
+                                # showlegend=False,
+                                autosize=True,
+                                width=1500,
+                                height=700,
+                                margin=dict(
+                                l=50,
+                                r=0,
+                                b=0,
+                                t=0,
+                                pad=0
+                            ))
+                            fig.update_xaxes(title_text=variable_1)
+                            fig.update_yaxes(
+                                title_text=variable_2, automargin=False)
+
+                            production_plot.plotly_chart(fig)
+
+                    elif (crossplot_Parameters == 3):
+
+                        variable_1 = crossplotParameters.selectbox(
+                            "1st Variable:", columns, help='X-axis.')
+
+                        variable_2 = crossplotParameters.selectbox(
+                            "2nd Variable:", columns, help='Y-axis.')
+
+                        variable_3 = crossplotParameters.selectbox(
+                            "3rd Variable:", columns, help='Bubble size.')
+
+                        radio = crossplotParameters.slider(
+                            'Bubble Size (Reducer)', min_value=1, value=1, max_value=100)
+
+                        with production_plot:
+
+                            # Plot
+
+                            fig = go.Figure()
+
+                            fig = make_subplots(
+                                rows=1, cols=2, column_widths=[0.7, 0.3])
+
+                            fig.add_trace(go.Scatter(
+                                x=data_df['time'], y=data_df[variable_1], name=variable_1), row=1, col=1)
+
+                            fig.add_vrect(x0=start_date_, x1=end_date_,
+                                          line_width=0, fillcolor="red", opacity=0.05)
+
+                            fig.add_vline(x=start_date_,  line_width=1,
+                                          line_dash="dash", line_color="black", row=1, col=1)
+                            fig.add_vline(x=end_date_,  line_width=1,
+                                          line_dash="dash", line_color="red", row=1, col=1)
+
+                            fig.add_trace(go.Scatter(
+                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color='blue', size=(data_df[variable_3]/radio))))
+
+                            fig.update_layout(legend=dict(
+                                orientation="h",
+                            ),
+                                showlegend=False,
+                                autosize=True,
+                                width=1000,
+                                height=550,
+                                margin=dict(
+                                l=50,
+                                r=0,
+                                b=0,
+                                t=0,
+                                pad=0
+                            ))
+                            fig.update_xaxes(title_text=variable_1)
+                            fig.update_yaxes(
+                                title_text=variable_2, automargin=False)
+
+                            production_plot.plotly_chart(fig)
+
+                    elif (crossplot_Parameters == 4):
+
+                        variable_1 = crossplotParameters.selectbox(
+                            "1st Variable:", columns, help='X-axis.')
+
+                        variable_2 = crossplotParameters.selectbox(
+                            "2nd Variable:", columns, help='Y-axis.')
+
+                        variable_3 = crossplotParameters.selectbox(
+                            "3rd Variable:", columns, help='Bubble size.')
+
+                        variable_4 = crossplotParameters.selectbox(
+                            "3rd Variable:", columns, help='Bubble color.')
+
+                        radio = crossplotParameters.slider(
+                            'Bubble Size (Reducer)', min_value=1, value=1, max_value=100)
+
+                        # Data Preparation
+
+                        with production_plot:
+
+                            # Plot
+
+                            fig = go.Figure()
+
+                            fig = make_subplots(
+                                rows=1, cols=2, column_widths=[0.7, 0.3])
+
+                            fig.add_trace(go.Scatter(
+                                x=data_df['time'], y=data_df[variable_1], name=variable_1), row=1, col=1)
+
+                            fig.add_vrect(x0=start_date_, x1=end_date_,
+                                          line_width=0, fillcolor="red", opacity=0.05)
+
+                            fig.add_vline(x=start_date_,  line_width=1,
+                                          line_dash="dash", line_color="black", row=1, col=1)
+                            fig.add_vline(x=end_date_,  line_width=1,
+                                          line_dash="dash", line_color="red", row=1, col=1)
+
+                            fig.add_trace(go.Scatter(
+                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color=data_df[variable_4], size=(data_df[variable_3]/radio))))
+
+                            fig.update_layout(legend=dict(
+                                orientation="h",
+                            ),
+                                showlegend=False,
+                                autosize=True,
+                                width=1000,
+                                height=550,
+                                margin=dict(
+                                l=50,
+                                r=0,
+                                b=0,
+                                t=0,
+                                pad=0
+                            ))
+                            fig.update_xaxes(title_text=variable_1)
+                            fig.update_yaxes(
+                                title_text=variable_2, automargin=False)
+
+                            production_plot.plotly_chart(fig)
                 elif (plot_Type == 'Decomposition'):
 
                     decompositionExpander = production_params.beta_expander(
