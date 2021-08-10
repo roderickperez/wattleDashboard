@@ -701,10 +701,10 @@ def app():
                             fig.update_layout(legend=dict(
                                 orientation="h",
                             ),
-                                showlegend=False,
+                                # showlegend=False,
                                 autosize=True,
-                                width=1000,
-                                height=550,
+                                width=1500,
+                                height=700,
                                 margin=dict(
                                 l=50,
                                 r=0,
@@ -763,10 +763,10 @@ def app():
                             fig.update_layout(legend=dict(
                                 orientation="h",
                             ),
-                                showlegend=False,
+                                # showlegend=False,
                                 autosize=True,
-                                width=1000,
-                                height=550,
+                                width=1500,
+                                height=700,
                                 margin=dict(
                                 l=50,
                                 r=0,
