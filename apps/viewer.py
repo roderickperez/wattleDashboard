@@ -258,7 +258,7 @@ def app():
 
                 if 'Real' in surfaces:
 
-                    Real = r'data\surfaces\Real.png'
+                    Real = r'data/surfaces/Real.png'
 
                     img_Real = folium.raster_layers.ImageOverlay(
                         name="Real",
@@ -274,7 +274,7 @@ def app():
 
                 if 'Unconformity' in surfaces:
 
-                    Unconformity = r'data\surfaces\unconformity.png'
+                    Unconformity = r'data/surfaces/unconformity.png'
 
                     img_Unconformity = folium.raster_layers.ImageOverlay(
                         name="Unconformity",
@@ -290,7 +290,7 @@ def app():
 
                 if 'La Luna' in surfaces:
 
-                    LaLuna = r'data\surfaces\LaLuna.png'
+                    LaLuna = r'data/surfaces/LaLuna.png'
 
                     img_LaLuna = folium.raster_layers.ImageOverlay(
                         name="La Luna",
@@ -306,7 +306,7 @@ def app():
 
                 if 'El Salto' in surfaces:
 
-                    ElSalto = r'data\surfaces\ElSalto.png'
+                    ElSalto = r'data/surfaces/ElSalto.png'
 
                     img_ElSalto = folium.raster_layers.ImageOverlay(
                         name="El Salto",
@@ -322,7 +322,7 @@ def app():
 
                 if 'Tablazo' in surfaces:
 
-                    Tablazo = r'data\surfaces\Tablazo.png'
+                    Tablazo = r'data/surfaces/Tablazo.png'
 
                     img_Tablazo = folium.raster_layers.ImageOverlay(
                         name="Tablazo",
@@ -338,7 +338,7 @@ def app():
 
                 if 'Rosa Blanca' in surfaces:
 
-                    rosaBlanca = r'data\surfaces\RosaBlanca.png'
+                    rosaBlanca = r'data/surfaces/RosaBlanca.png'
 
                     img_RosaBlanca = folium.raster_layers.ImageOverlay(
                         name="Rosa Blanca",
@@ -354,7 +354,7 @@ def app():
 
                 if 'Rosa Blanca (Thin)' in surfaces:
 
-                    rosaBlancaThin = r'data\surfaces\RosaBlancaFaultThin.png'
+                    rosaBlancaThin = r'data/surfaces/RosaBlancaFaultThin.png'
 
                     img_RosaBlancaThin = folium.raster_layers.ImageOverlay(
                         name="Rosa Blanca (Thin)",
