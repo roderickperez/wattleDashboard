@@ -604,6 +604,8 @@ def app():
                     end_date_index = data_df[data_df['time']
                                              == end_date_].index[0]
 
+                    data_df_ = data_df[start_date_index:end_date_index]
+
                     ############ Data Loading ############
 
                     # production_plot.write(data_df)
@@ -638,7 +640,7 @@ def app():
                                           line_dash="dash", line_color="red", row=1, col=1)
 
                             fig.add_trace(go.Scatter(
-                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color='blue', size=radio)),
+                                x=data_df_[variable_1], y=data_df_[variable_2], mode='markers', marker=dict(color='blue', size=radio)),
                                 row=1, col=2)
 
                             fig.update_layout(legend=dict(
@@ -673,7 +675,14 @@ def app():
                             "3rd Variable:", columns, help='Bubble size.')
 
                         radio = crossplotParameters.slider(
-                            'Bubble Size (Reducer)', min_value=1, value=1, max_value=100)
+                            'Bubble Size (Reducer)', min_value=1, value=50, max_value=100)
+
+                        nullTest_v3 = data_df_[variable_3].isnull(
+                        ).values.any()
+
+                        if (nullTest_v3 == True):
+                            data_df_[variable_3] = data_df_[
+                                variable_3].dropna()
 
                         with production_plot:
 
@@ -696,7 +705,7 @@ def app():
                                           line_dash="dash", line_color="red", row=1, col=1)
 
                             fig.add_trace(go.Scatter(
-                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color='blue', size=(data_df[variable_3]/radio))),
+                                x=data_df_[variable_1], y=data_df_[variable_2], mode='markers', marker=dict(color='blue', size=(data_df_[variable_3]/radio))),
                                 row=1, col=2)
 
                             fig.update_layout(legend=dict(
@@ -734,7 +743,21 @@ def app():
                             "3rd Variable:", columns, help='Bubble color.')
 
                         radio = crossplotParameters.slider(
-                            'Bubble Size (Reducer)', min_value=1, value=1, max_value=100)
+                            'Bubble Size (Reducer)', min_value=1, value=50, max_value=100)
+
+                        nullTest_v3 = data_df_[variable_3].isnull(
+                        ).values.any()
+
+                        if (nullTest_v3 == True):
+                            data_df_[variable_3] = data_df_[
+                                variable_3].dropna()
+
+                        nullTest_v4 = data_df_[variable_4].isnull(
+                        ).values.any()
+
+                        if (nullTest_v4 == True):
+                            data_df_[variable_4] = data_df_[
+                                variable_4].dropna()
 
                         # Data Preparation
 
@@ -759,7 +782,7 @@ def app():
                                           line_dash="dash", line_color="red", row=1, col=1)
 
                             fig.add_trace(go.Scatter(
-                                x=data_df[variable_1], y=data_df[variable_2], mode='markers', marker=dict(color=data_df[variable_4], size=(data_df[variable_3]/radio))),
+                                x=data_df_[variable_1], y=data_df_[variable_2], mode='markers', marker=dict(color=data_df_[variable_4], size=(data_df_[variable_3]/radio))),
                                 row=1, col=2)
 
                             fig.update_layout(legend=dict(

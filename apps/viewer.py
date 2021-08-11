@@ -15,7 +15,7 @@ def app():
 
     st.markdown('# Viewer')
 
-    viewer_params, viewer_plot = st.beta_columns(
+    viewer_params, viewer_plot = st.columns(
         (1, 4))
 
     with viewer_params:
@@ -23,7 +23,7 @@ def app():
 
         viewerMode = viewer_params.radio('Mode', viewer_Mode)
 
-        mapSettingExpander = viewer_params.beta_expander('Map Settings')
+        mapSettingExpander = viewer_params.expander('Map Settings')
 
         zoom = mapSettingExpander.slider('Map Zoom:',
                                          min_value=0, value=13, max_value=20)
@@ -40,7 +40,7 @@ def app():
 
                 viewer_params.markdown('#### Wells')
 
-                wellsSettingExpander = viewer_params.beta_expander(
+                wellsSettingExpander = viewer_params.expander(
                     'Well Settings')
 
                 radius = wellsSettingExpander.slider('Radius:',
@@ -220,7 +220,7 @@ def app():
             if 'Seismic Polygon' in showObject:
                 viewer_params.markdown('#### Polygons')
 
-                polygonSettingExpander = viewer_params.beta_expander(
+                polygonSettingExpander = viewer_params.expander(
                     'Polygon Settings')
 
                 pColor = polygonSettingExpander.color_picker(
@@ -247,7 +247,7 @@ def app():
             if 'Surfaces' in showObject:
                 viewer_params.markdown('#### Surfaces')
 
-                surfacesSettingExpander = viewer_params.beta_expander(
+                surfacesSettingExpander = viewer_params.expander(
                     'Surface Settings')
 
                 opacity = surfacesSettingExpander.slider('Surface Opacity:',
