@@ -38,7 +38,7 @@ def app():
         fig_crude.layout.update(xaxis_rangeslider_visible=True)
         st.plotly_chart(fig_crude)
 
-        expander_crudePriceTable = st.expander(
+        expander_crudePriceTable = st.beta_expander(
             f'Show Crude Table: {selected_stock_crude}')
         expander_crudePriceTable.write(data_crude.head())
 
@@ -57,6 +57,6 @@ def app():
         fig_gas.layout.update(xaxis_rangeslider_visible=True)
         st.plotly_chart(fig_gas)
 
-        expander_naturGasPriceTable = st.expander(
+        expander_naturGasPriceTable = st.beta_expander(
             f'Show Crude Table: {selected_stock_naturGas}')
         expander_naturGasPriceTable.write(data_naturGas.head())

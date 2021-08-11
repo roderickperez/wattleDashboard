@@ -73,7 +73,7 @@ def app():
 
         forecast_params.markdown('### Parameters')
 
-        economicParameters = forecast_params.expander(
+        economicParameters = forecast_params.beta_expander(
             'Economic Limit Parameters')
 
         workingInterest = economicParameters.slider('Working Interest (%):',
@@ -141,7 +141,7 @@ def app():
             #################################
             forecast_params.markdown('#### Data')
 
-            seriesParameters = forecast_params.expander(
+            seriesParameters = forecast_params.beta_expander(
                 'Seasonality')
 
             seasonalityMode = ['Daily', 'Monthly', 'Yearly', 'Custom']
@@ -153,7 +153,7 @@ def app():
 
             forecast_params.markdown('#### Forecast')
 
-            forecastParameters = forecast_params.expander(
+            forecastParameters = forecast_params.beta_expander(
                 'Dates')
 
             #################################
@@ -168,7 +168,7 @@ def app():
                 forecastModel_Type = forecast_params.selectbox(
                     'Forecast Model Type', forecastModelType)
 
-                modelParametersExpander = forecast_params.expander(
+                modelParametersExpander = forecast_params.beta_expander(
                     'Model Parameters')
 
                 #################################
@@ -884,14 +884,14 @@ def app():
 
                     # Test Results
 
-                    testResultsExpander = forecast_plot.expander(
+                    testResultsExpander = forecast_plot.beta_expander(
                         'Test Result')
 
                     testResultsExpander.write(pred)
 
                     # Forecast Results
 
-                    forecastResultsExpander = forecast_plot.expander(
+                    forecastResultsExpander = forecast_plot.beta_expander(
                         'Forecast Result')
 
                     forecastResultsExpander.write(fcst)
@@ -933,7 +933,7 @@ def app():
                     output_forecast.markdown(
                         f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
 
-                    forecastBoundariesExpander = st.expander(
+                    forecastBoundariesExpander = st.beta_expander(
                         'Forecast Boundaries')
 
                     forecastBoundariesExpander.markdown(
@@ -963,7 +963,7 @@ def app():
                     output_forecast.markdown(
                         f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
 
-                    EURBoundariesExpander = st.expander(
+                    EURBoundariesExpander = st.beta_expander(
                         'EUR Boundaries')
 
                     EURBoundariesExpander.markdown(
@@ -992,7 +992,7 @@ def app():
                 forecastModel_Type = forecast_params.selectbox(
                     'Forecast Model Type', forecastModelType)
 
-                modelParametersExpander = forecast_params.expander(
+                modelParametersExpander = forecast_params.beta_expander(
                     'Model Parameters')
 
                 #################################
@@ -1588,7 +1588,7 @@ def app():
                 # Check extra parameters: https://facebookresearch.github.io/Kats/api/_modules/kats/models/var.html
                 # https://facebookresearch.github.io/Kats/api/kats.models.var.html
 
-                modelParametersExpander = forecast_params.expander(
+                modelParametersExpander = forecast_params.beta_expander(
                     'Model Parameters')
 
                 trend = modelParametersExpander.radio(
@@ -1770,11 +1770,11 @@ def app():
 
                     forecast_plot.plotly_chart(fig)
 
-                    resultsExpanderV1 = forecast_plot.expander(
+                    resultsExpanderV1 = forecast_plot.beta_expander(
                         'Forecast Variable 1')
                     resultsExpanderV1.write(predV1)
 
-                    resultsExpanderV2 = forecast_plot.expander(
+                    resultsExpanderV2 = forecast_plot.beta_expander(
                         'Forecast Variable 2')
                     resultsExpanderV2.write(predV2)
 
@@ -1825,7 +1825,7 @@ def app():
                     output_forecast.markdown(
                         f"<h4 style = 'text-align: center; color: black;'>{gasForecast}</h4>", unsafe_allow_html=True)
 
-                    forecastBoundariesExpander = st.expander(
+                    forecastBoundariesExpander = st.beta_expander(
                         'Forecast Boundaries')
 
                     forecastBoundariesExpander.markdown(
@@ -1855,7 +1855,7 @@ def app():
                     output_forecast.markdown(
                         f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
 
-                    EURBoundariesExpander = st.expander(
+                    EURBoundariesExpander = st.beta_expander(
                         'EUR Boundaries')
 
                     EURBoundariesExpander.markdown(
@@ -1880,7 +1880,7 @@ def app():
 
                 backtester_errors = {}
 
-                modelParametersExpander = forecast_params.expander(
+                modelParametersExpander = forecast_params.beta_expander(
                     'Model Parameters')
 
                 forecastModel_Type = 'ARIMA'

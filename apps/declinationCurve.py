@@ -83,7 +83,7 @@ def app():
 
         DCA_params.markdown('#### Declination Curve (Arps)')
 
-        arpsParameters = st.expander('Parameters')
+        arpsParameters = st.beta_expander('Parameters')
 
         qi = arpsParameters.slider('qi:',
                                    min_value=0.001, value=3500.0, max_value=10000.0)
@@ -94,7 +94,7 @@ def app():
 
         DCA_params.markdown('#### Economic')
 
-        economicParameters = DCA_params.expander('Parameters')
+        economicParameters = DCA_params.beta_expander('Parameters')
 
         workingInterest = economicParameters.slider('Working Interest (%):',
                                                     min_value=0.0, value=100.0, max_value=100.0)
@@ -154,7 +154,7 @@ def app():
 
         DCA_params.markdown('#### Forecast')
 
-        forecastParameters = st.expander('Parameters')
+        forecastParameters = st.beta_expander('Parameters')
         forecast_days = forecastParameters.slider('Days:',
                                                   min_value=0, value=1825, max_value=3650)
 
@@ -183,7 +183,7 @@ def app():
 
         DCA_params.markdown('#### Equations')
 
-        arpsEquation_expander = st.expander('Arps Equation')
+        arpsEquation_expander = st.beta_expander('Arps Equation')
 
         arpsEquation_expander.write('Arps Equation')
         arpsEquation_expander.markdown(
@@ -197,12 +197,12 @@ def app():
         arpsEquation_expander.markdown(
             '$D = \\frac{D_{i}}{1+bD_{i}t}$')
 
-        DCAimage_expander = st.expander('DCA Sketch')
+        DCAimage_expander = st.beta_expander('DCA Sketch')
 
         image = Image.open('images/DeclinationCurve.png')
         DCAimage_expander.image(image, width=300)
 
-        economicEquations_expander = DCA_params.expander(
+        economicEquations_expander = DCA_params.beta_expander(
             'Economics')
 
         economicEquations_expander.write('Net Cash Flow Eq')
