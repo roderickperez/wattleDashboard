@@ -66,7 +66,7 @@ def app():
 
     ##################################
 
-    forecast_params, forecast_plot, output_forecast = st.columns(
+    forecast_params, forecast_plot, output_forecast = st.beta_columns(
         (1, 3, 1))
 
     with forecast_params:

@@ -19,16 +19,16 @@ def app():
         (1, 4))
 
     with viewer_params:
-        viewer_Mode = ['Map View', '3D View']
+        viewer_Mode = ['Map View', 'Bubble Map - Time Line', '3D View']
 
         viewerMode = viewer_params.radio('Mode', viewer_Mode)
 
-        mapSettingExpander = viewer_params.expander('Map Settings')
-
-        zoom = mapSettingExpander.slider('Map Zoom:',
-                                         min_value=0, value=13, max_value=20)
-
         if viewerMode == 'Map View':
+
+            mapSettingExpander = viewer_params.expander('Map Settings')
+
+            zoom = mapSettingExpander.slider('Map Zoom:',
+                                             min_value=0, value=13, max_value=20)
 
             m = folium.Map(location=[8.3426, -73.6827],
                            zoom_start=zoom, tiles="cartodbpositron")
@@ -374,6 +374,9 @@ def app():
 
             with viewer_plot:
                 folium_static(m, width=1400, height=700)
+
+        elif viewerMode == 'Bubble Map - Time Line':
+            pass
 
         elif viewerMode == '3D View':
             pass

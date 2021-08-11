@@ -22,7 +22,7 @@ def app():
 
     st.write('Source: Yahoo-Finance')
 
-    crude_plot, naturGas_plot = st.columns(2)
+    crude_plot, naturGas_plot = st.beta_columns(2)
 
     with crude_plot:
         st.markdown("### Crude")

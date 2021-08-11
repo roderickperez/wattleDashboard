@@ -36,7 +36,7 @@ def app():
 
     ##########
 
-    logs_params, logs_plot = st.columns((1, 4))
+    logs_params, logs_plot = st.beta_columns((1, 4))
 
     with logs_params:
         st.markdown('## Parameters')

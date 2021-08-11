@@ -71,7 +71,7 @@ def app():
         return nomDecline
 
     ############################
-    DCA_params, prod_plot, DCA_output = st.columns((1, 3, 1))
+    DCA_params, prod_plot, DCA_output = st.beta_columns((1, 3, 1))
 
     with DCA_params:
         DCA_params.markdown('### Declination Curve Parameters')

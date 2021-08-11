@@ -139,7 +139,7 @@ def app():
 
     st.markdown("### Field")
 
-    gas_current, oil_current, water_current = st.columns(3)
+    gas_current, oil_current, water_current = st.beta_columns(3)
 
     with gas_current:
         gas_current.markdown("### Gas [MCF]")
@@ -220,7 +220,7 @@ def app():
 
     st.markdown("### Wells")
 
-    caramelo_2_current, caramelo_3_current, toposi_1_current, toposi_2H_current, laEstancia_1H_current = st.columns(
+    caramelo_2_current, caramelo_3_current, toposi_1_current, toposi_2H_current, laEstancia_1H_current = st.beta_columns(
         5)
 
     with caramelo_2_current:
@@ -270,7 +270,7 @@ def app():
 
     st.markdown("### Field")
 
-    gas_kpi, oil_kpi, water_kpi = st.columns(3)  # condens_kpi
+    gas_kpi, oil_kpi, water_kpi = st.columbeta_columnsns(3)  # condens_kpi
 
     with gas_kpi:
         gas_kpi.markdown("### Gas [MCF]")
@@ -357,7 +357,7 @@ def app():
     # Forth Row
     st.markdown("### Well")
 
-    caramelo_2_kpi, caramelo_3_kpi, toposi_1_kpi, toposi_2H_kpi, laEstancia_1H_kpi = st.columns(
+    caramelo_2_kpi, caramelo_3_kpi, toposi_1_kpi, toposi_2H_kpi, laEstancia_1H_kpi = st.beta_columns(
         5)
 
     with caramelo_2_kpi:
