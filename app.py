@@ -2,7 +2,7 @@ import streamlit as st
 from multiapp import MultiApp
 # import your app modules here
 # , maps, logsEDA, logsML, productionEDA, seismic, economics, MLforecast, declinationCurve
-from apps import home, productionEDA, declinationCurve, MLforecast, economics, viewer, logsEDA
+from apps import home, productionEDA, declinationCurve, MLforecast, marketFinance, viewer, logsEDA
 from PIL import Image
 
 
@@ -35,7 +35,7 @@ app.add_app("Production EDA", productionEDA.app)
 app.add_app("Declination Curve", declinationCurve.app)
 app.add_app("ML Production Forecast", MLforecast.app)
 #app.add_app("Viewer)", viewer.app)
-app.add_app("Economics", economics.app)
+app.add_app("Market Finance Data", marketFinance.app)
 
 # The main app
 app.run()
