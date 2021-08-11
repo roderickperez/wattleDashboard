@@ -270,7 +270,7 @@ def app():
 
     st.markdown("### Field")
 
-    gas_kpi, oil_kpi, water_kpi = st.columbeta_columnsns(3)  # condens_kpi
+    gas_kpi, oil_kpi, water_kpi = st.beta_columns(3)  # condens_kpi
 
     with gas_kpi:
         gas_kpi.markdown("### Gas [MCF]")
