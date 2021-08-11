@@ -1,21 +1,15 @@
 import streamlit as st
-# import numpy as np
-# from scipy.interpolate import griddata
-# import pandas as pd
-# import matplotlib.pyplot as plt
-# from plotly import graph_objs as go
-# import welleng as we
 import folium
 from streamlit_folium import folium_static
-# # import ee
-# # import geemap.eefolium as geemap
+from plotly import graph_objs as go
+import pandas as pd
 
 
 def app():
 
     st.markdown('# Viewer')
 
-    viewer_params, viewer_plot = st.beta_columns(
+    viewer_params, viewer_plot = st.columns(
         (1, 4))
 
     with viewer_params:
@@ -376,7 +370,29 @@ def app():
                 folium_static(m, width=1400, height=700)
 
         elif viewerMode == 'Bubble Map - Time Line':
-            pass
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=[0, 1], y=[0, 1]))
+
+            fig.update_layout(
+                xaxis=dict(range=[0, 5], autorange=False),
+                yaxis=dict(range=[0, 5], autorange=False),
+                title="Start Title",
+                updatemenus=[dict(
+                    type="buttons",
+                    buttons=[dict(label="Play",
+                                  method="animate",
+                                  args=[None])])]
+            )
+
+            fig.frames = [go.Frame(data=[go.Scatter(x=[1, 2], y=[1, 2])]),
+                          go.Frame(data=[go.Scatter(x=[1, 4], y=[1, 4])]),
+                          go.Frame(data=[go.Scatter(x=[3, 4], y=[3, 4])],
+                                   layout=go.Layout(title_text="End Title"))]
+            # )
+            fig.update_layout(title_text="End Title")
+            viewer_plot.plotly_chart(fig)
 
         elif viewerMode == '3D View':
             pass
+
+    viewer_plot

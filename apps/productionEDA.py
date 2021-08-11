@@ -49,7 +49,7 @@ def app():
 
     ##########
 
-    production_params, production_plot, summary_statistics = st.beta_columns(
+    production_params, production_plot, summary_statistics = st.columns(
         (1, 4, 1))
 
     with production_params:
@@ -317,7 +317,7 @@ def app():
             with summary_statistics:
 
                 summary_statistics.markdown('## Summary')
-                summaryExpander = summary_statistics.beta_expander(
+                summaryExpander = summary_statistics.expander(
                     'Statistics')
                 summaryExpander.write(
                     data[plot_selectionVariable].describe())
@@ -349,7 +349,7 @@ def app():
                     #################################
                     production_params.markdown('#### Data')
 
-                    seriesParameters = production_params.beta_expander(
+                    seriesParameters = production_params.expander(
                         'Seasonality')
 
                     seasonalityMode = ['Daily', 'Monthly', 'Yearly', 'Custom']
@@ -361,7 +361,7 @@ def app():
 
                     production_params.markdown('#### Range')
 
-                    forecastParameters = production_params.beta_expander(
+                    forecastParameters = production_params.expander(
                         'Dates')
 
                     #############################################
@@ -539,17 +539,17 @@ def app():
 
                         # summary_statistics.write(ts_)
 
-                        summaryExpander = summary_statistics.beta_expander(
+                        summaryExpander = summary_statistics.expander(
                             'Full')
                         summaryExpander.table(
                             data[plot_selectionVariable].describe())
 
-                        # summaryExpander = summary_statistics.beta_expander(
+                        # summaryExpander = summary_statistics.expander(
                         #     'Selected Range')
                         # summaryExpander.write(
                         #     data[plot_selectionVariable].describe())
 
-                        summaryExpander = summary_statistics.beta_expander(
+                        summaryExpander = summary_statistics.expander(
                             'Selected Range Features')
 
                         # summaryExpander.write(type(features_ts))
@@ -572,10 +572,10 @@ def app():
                     data_df['time'] = pd.to_datetime(
                         data_df.Date, format='%m/%d/%Y')
 
-                    datesParameters = production_params.beta_expander(
+                    datesParameters = production_params.expander(
                         'Dates')
 
-                    crossplotParameters = production_params.beta_expander(
+                    crossplotParameters = production_params.expander(
                         'Crossplot Parameters')
 
                     crossplot_Parameters = crossplotParameters.radio(
@@ -806,7 +806,7 @@ def app():
                             production_plot.plotly_chart(fig)
                 elif (plot_Type == 'Decomposition'):
 
-                    decompositionExpander = production_params.beta_expander(
+                    decompositionExpander = production_params.expander(
                         'Parameters')
 
                     seasonalModelType = ['Additive', 'Multiplicative']
@@ -886,12 +886,12 @@ def app():
                         summary_statistics.markdown('## Summary')
                         summary_statistics.write('### Stationarity')
 
-                        summaryExpander = summary_statistics.beta_expander(
+                        summaryExpander = summary_statistics.expander(
                             'Statistics')
                         summaryExpander.write(
                             data[plot_selectionVariable].describe())
 
-                        stationarityExpander = summary_statistics.beta_expander(
+                        stationarityExpander = summary_statistics.expander(
                             'Stationarity')
 
                         original = data[plot_selectionVariable]
@@ -943,7 +943,7 @@ def app():
 
                 if customModel_Type == 'ARIMA':
 
-                    ARIMAanalysisExpander = production_params.beta_expander(
+                    ARIMAanalysisExpander = production_params.expander(
                         'Data')
 
                     ARIMAanalysisModelType = ['Full', 'Seasonal']
@@ -952,12 +952,12 @@ def app():
                         'Select:', ARIMAanalysisModelType, index=1)
 
                     # Mode
-                    # ARIMAmodelExpander = production_params.beta_expander(
+                    # ARIMAmodelExpander = production_params.expander(
                     #     'Mode')
 
                     # ARIMA Parameters
 
-                    ARIMAModelParameters = st.beta_expander(
+                    ARIMAModelParameters = st.expander(
                         'Parameters')
 
                     train_perc = ARIMAModelParameters.slider(
@@ -996,7 +996,7 @@ def app():
 
                     elif (ARIMAanalysisModel_Type == 'Seasonal'):
 
-                        seasonalityARIMAExpander = production_params.beta_expander(
+                        seasonalityARIMAExpander = production_params.expander(
                             'Seasonality Mode')
 
                         ###########
@@ -1070,7 +1070,7 @@ def app():
                     fcst = ARIMA_model_fit.forecast(
                         steps=len(data_df_test))[0]
 
-                    ARIMAplotExpander = production_params.beta_expander(
+                    ARIMAplotExpander = production_params.expander(
                         'Plot Type')
 
                     ARIMAPlot = ARIMAplotExpander.radio(
@@ -1120,7 +1120,7 @@ def app():
 
                         production_plot.pyplot(fig)
 
-                        plotDescriptionExpander = st.beta_expander(
+                        plotDescriptionExpander = st.expander(
                             'Plot description')
 
                         plotDescriptionExpander.markdown(
@@ -1203,7 +1203,7 @@ def app():
 
                     with summary_statistics:
                         summary_statistics.markdown('## Parameters')
-                        ARIMAModelSummary = summary_statistics.beta_expander(
+                        ARIMAModelSummary = summary_statistics.expander(
                             'ARIMA Model Summary')
                         ARIMAModelSummary.write(
                             ARIMA_model_fit.summary())
@@ -1252,7 +1252,7 @@ def app():
                     #     data_ts = pd.concat(
                     #         [data_df['Date'], data_df[plot_selectionVariable]], axis=1)
 
-                    #     ARIMAModelParameters = st.beta_expander(
+                    #     ARIMAModelParameters = st.expander(
                     #         'ARIMA Parameters')
 
                     #     lags = ARIMAModelParameters.slider(
@@ -1330,7 +1330,7 @@ def app():
                     #     # data_ts = pd.concat(
                     #     #     [data_df['Date'], data_df[plot_selectionVariable]], axis=1)
 
-                    #     # ARIMAModelParameters = st.beta_expander(
+                    #     # ARIMAModelParameters = st.expander(
                     #     #     'ARIMA Parameters')
 
                     #     # lags = ARIMAModelParameters.slider(
@@ -1405,7 +1405,7 @@ def app():
                         # data_ts = pd.concat(
                         #     [data_df['Date'], data_df[plot_selectionVariable]], axis=1)
 
-                        # ARIMAModelParameters = st.beta_expander(
+                        # ARIMAModelParameters = st.expander(
                         #     'ARIMA Parameters')
 
                         # train_perc = ARIMAModelParameters.slider(
@@ -1425,7 +1425,7 @@ def app():
                         # auto_arima(data_df_train, m = m, start = 0, seasonal = True, trace = True, error_action = 'ignore', suppress_warnings = True, stepwise = True)
                 elif customModel_Type == 'Moving Average':
 
-                    MovingAverageExpander = st.beta_expander(
+                    MovingAverageExpander = st.expander(
                         'Moving Average Parameters')
 
                     customModel_period = MovingAverageExpander.slider('Period:',

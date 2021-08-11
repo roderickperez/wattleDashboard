@@ -22,7 +22,7 @@ def app():
 
     st.write('Source: Yahoo-Finance')
 
-    crude_plot, naturGas_plot = st.beta_columns(2)
+    crude_plot, naturGas_plot = st.columns(2)
 
     with crude_plot:
         st.markdown("### Crude")
@@ -38,7 +38,7 @@ def app():
         fig_crude.layout.update(xaxis_rangeslider_visible=True)
         st.plotly_chart(fig_crude)
 
-        expander_crudePriceTable = st.beta_expander(
+        expander_crudePriceTable = st.expander(
             f'Show Crude Table: {selected_stock_crude}')
         expander_crudePriceTable.write(data_crude.head())
 
@@ -57,6 +57,6 @@ def app():
         fig_gas.layout.update(xaxis_rangeslider_visible=True)
         st.plotly_chart(fig_gas)
 
-        expander_naturGasPriceTable = st.beta_expander(
+        expander_naturGasPriceTable = st.expander(
             f'Show Crude Table: {selected_stock_naturGas}')
         expander_naturGasPriceTable.write(data_naturGas.head())
