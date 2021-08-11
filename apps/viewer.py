@@ -15,7 +15,7 @@ def app():
 
     st.markdown('# Viewer')
 
-    viewer_params, viewer_plot = st.columns(
+    viewer_params, viewer_plot = st.beta_columns(
         (1, 4))
 
     with viewer_params:
