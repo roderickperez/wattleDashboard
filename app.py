@@ -40,8 +40,8 @@ app.add_app("Market Finance Data", marketFinance.app)
 # The main app
 app.run()
 
-st.sidebar.write("Version: 0.3.0")
-st.sidebar.write("Last Update: August, 11th, 2021")
+st.sidebar.write("Version: 0.3.1")
+st.sidebar.write("Last Update: August, 12th, 2021")
 
 st.sidebar.markdown("### Information")
 

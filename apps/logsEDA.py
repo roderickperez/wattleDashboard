@@ -134,45 +134,181 @@ def app():
 
             well_df = well_df.dropna()
 
-            selected_logs = logs_params.multiselect("Logs", mnemonic,
-                                                    default=mnemonic)
+            st.write(
+                '<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
 
-            fig = go.Figure()
+            visualizationType = logs_params.radio(
+                'Visualization Type', ['1D', '2D'])
 
-            fig = make_subplots(
-                rows=1, cols=len(selected_logs), shared_yaxes=True)
+            if visualizationType == '1D':
 
-            for i in range(len(selected_logs)):
+                selected_logs = logs_params.multiselect("Logs", mnemonic,
+                                                        default=mnemonic)
+
+                fig = go.Figure()
+
+                fig = make_subplots(
+                    rows=1, cols=len(selected_logs), shared_yaxes=True)
+
+                for i in range(len(selected_logs)):
+                    fig.add_trace(go.Scatter(
+                        x=well_df[selected_logs[i]], y=well_df['DEPTH'], name=selected_logs[i]), row=1, col=i+1)
+
+                fig.update_yaxes(autorange="reversed")
+                fig.update_layout(
+                    yaxis_title="Depth [ft]",
+                    legend=dict(
+                        orientation="h",
+                    ),
+                    # showlegend=False,
+                    autosize=True,
+                    width=1000,
+                    height=700,
+                    margin=dict(
+                        l=50,
+                        r=0,
+                        b=0,
+                        t=0,
+                        pad=0
+                    ))
+
+                with logs_summary:
+                    logs_summary.markdown('## Summary')
+                    logSummary_expander = logs_summary.expander('Details')
+                    logSummary_expander.write(well_df.describe())
+
+                    ###############################
+                    logs_summary.markdown('### Well Tops')
+
+                    wellTops_mode = logs_summary.radio(
+                        'Well Tops', ['Off', 'On'])
+
+                    if wellTops_mode == 'On':
+
+                        wellTop = load_wellTops()
+
+                        wellTop.drop('Well identifier', axis=1, inplace=True)
+
+                        wellLogTable_expander = logs_summary.expander(
+                            'Well Logs Table (MD)')
+
+                        wellLogTable_expander.table(wellTop)
+
+                        wellTops = wellTop['Surface'].unique()
+
+                        logs_summary.markdown('#### Interpreter')
+
+                        WattleInterpreter = logs_summary.checkbox(
+                            'Wattle')
+
+                        LewisInterpreter = logs_summary.checkbox(
+                            'Lewis Energy')
+
+                        selected_wellTops = logs_summary.multiselect(
+                            "Well Tops", wellTops)
+
+                        for i in range(len(selected_wellTops)):
+                            wellSelection = wellTop[wellTop['Surface']
+                                                    == selected_wellTops[i]]
+
+                            fig.add_hline(y=int(wellSelection.MD),  line_width=1,
+                                          line_dash="dash", line_color="black")
+
+                logs_plot.plotly_chart(fig)
+
+            elif visualizationType == '2D':
+                selected_X = logs_params.selectbox("X", mnemonic)
+
+                selected_Y = logs_params.selectbox("Y", mnemonic)
+
+                depthRangeExpander = logs_params.expander(
+                    'Depth Range')
+
+                top_depth = depthRangeExpander.slider('Depth Top [ft]:',
+                                                      min_value=float(well_df['DEPTH'].min()), value=float(well_df['DEPTH'].min()), max_value=float(well_df['DEPTH'].max()), step=0.5)
+
+                bottom_depth = depthRangeExpander.slider('Depth Bottom [ft]:',
+                                                         min_value=float(well_df['DEPTH'].min()), value=float(
+                                                             well_df['DEPTH'].max()), max_value=float(well_df['DEPTH'].max()), step=0.5)
+
+                if top_depth > bottom_depth:
+                    depthRangeExpander.error(
+                        "Error: Bottom depth can't be greater than top depth.")
+
+                top_index = well_df[well_df['DEPTH'] == top_depth].index.tolist()[
+                    0]
+                bottom_index = well_df[well_df['DEPTH'] == bottom_depth].index.tolist()[
+                    0]
+
+                visualizationTypeExpander = logs_params.expander(
+                    'Visualization Settings')
+
+                radius = visualizationTypeExpander.slider('Radius:',
+                                                          min_value=0, value=10, max_value=20)
+
+                color = visualizationTypeExpander.color_picker(
+                    'Color:', '#F900C9')
+
+                fig = go.Figure()
+
+                fig = make_subplots(
+                    rows=1, cols=3, shared_yaxes=False, column_widths=[0.3, 0.3, 0.6])
+
                 fig.add_trace(go.Scatter(
-                    x=well_df[selected_logs[i]], y=well_df['DEPTH'], name=selected_logs[i]), row=1, col=i+1)
+                    x=well_df[selected_X], y=well_df['DEPTH'], name=selected_X), row=1, col=1)
 
-            fig.update_yaxes(autorange="reversed")
-            fig.update_layout(
-                yaxis_title="Depth [ft]",
-                legend=dict(
-                    orientation="h",
-                ),
-                # showlegend=False,
-                autosize=True,
-                width=1000,
-                height=700,
-                margin=dict(
-                    l=50,
-                    r=0,
-                    b=0,
-                    t=0,
-                    pad=0
-                ))
+                fig.add_hline(y=top_depth,  line_width=1,
+                              line_dash="dashdot", line_color="red", row=1, col=1)
 
-            with logs_summary:
-                logs_summary.markdown('## Summary')
-                logSummary_expander = logs_summary.expander('Details')
-                logSummary_expander.write(well_df.describe())
+                fig.add_hline(y=bottom_depth,  line_width=1,
+                              line_dash="dashdot", line_color="red", row=1, col=1)
 
-                ###############################
-                logs_summary.markdown('## Well Tops')
+                fig.add_hrect(y0=top_depth, y1=bottom_depth,
+                              line_width=0, fillcolor="green", opacity=0.05, row=1, col=1)
 
-                wellTops_mode = logs_summary.radio(
+                fig.add_trace(go.Scatter(
+                    x=well_df[selected_Y], y=well_df['DEPTH'], name=selected_Y), row=1, col=2)
+
+                fig.add_hline(y=top_depth,  line_width=1,
+                              line_dash="dashdot", line_color="red", row=1, col=2)
+
+                fig.add_hline(y=bottom_depth,  line_width=1,
+                              line_dash="dashdot", line_color="red", row=1, col=2)
+
+                fig.add_hrect(y0=top_depth, y1=bottom_depth,
+                              line_width=0, fillcolor="green", opacity=0.05, row=1, col=2)
+
+                fig.add_trace(go.Scatter(
+                    x=well_df.loc[top_index:bottom_index,
+                                  selected_X], y=well_df.loc[top_index:bottom_index, selected_Y],
+                    mode='markers', marker=dict(color=color, size=radius)), row=1, col=3)
+
+                # Update xaxis properties
+                fig.update_xaxes(title_text=selected_X, row=1, col=1)
+                fig.update_xaxes(title_text=selected_Y, row=1, col=2)
+                fig.update_xaxes(title_text=selected_X, row=1, col=3)
+
+                fig.update_yaxes(
+                    title_text="Depth [ft]", autorange="reversed", row=1, col=1)
+                fig.update_yaxes(
+                    title_text="Depth [ft]", autorange="reversed", row=1, col=2)
+                fig.update_yaxes(title_text=selected_Y, row=1, col=3)
+
+                # fig.update_yaxes(autorange="reversed")
+                fig.update_layout(
+                    showlegend=False,
+                    autosize=True,
+                    width=1400,
+                    height=700,
+                    margin=dict(
+                        l=50,
+                        r=0,
+                        b=0,
+                        t=0,
+                        pad=0
+                    ))
+
+                wellTops_mode = logs_params.radio(
                     'Well Tops', ['Off', 'On'])
 
                 if wellTops_mode == 'On':
@@ -181,26 +317,33 @@ def app():
 
                     wellTop.drop('Well identifier', axis=1, inplace=True)
 
-                    wellLogTable_expander = logs_summary.expander(
-                        'Well Logs (MD)')
-
-                    wellLogTable_expander.table(wellTop)
+                    wellLogSettings_expander = logs_params.expander(
+                        'Well Logs Settings')
 
                     wellTops = wellTop['Surface'].unique()
 
-                    selected_wellTops = logs_summary.multiselect(
-                        "Well Tops", wellTops)
+                    wellLogSettings_expander.markdown('#### Interpreter')
 
-                    # wellSelectionDisplay = []
+                    WattleInterpreter = wellLogSettings_expander.checkbox(
+                        'Wattle')
+
+                    LewisInterpreter = wellLogSettings_expander.checkbox(
+                        'Lewis Energy')
+
+                    selected_wellTops = wellLogSettings_expander.multiselect(
+                        "Well Tops", wellTops)
 
                     for i in range(len(selected_wellTops)):
                         wellSelection = wellTop[wellTop['Surface']
                                                 == selected_wellTops[i]]
 
                         fig.add_hline(y=int(wellSelection.MD),  line_width=1,
-                                      line_dash="dash", line_color="black")
+                                      line_dash="dash", line_color="black", row=1, col=1)
 
-            logs_plot.plotly_chart(fig)
+                        fig.add_hline(y=int(wellSelection.MD),  line_width=1,
+                                      line_dash="dash", line_color="black", row=1, col=2)
+
+                logs_plot.plotly_chart(fig)
 
         elif (modeType == 'All Wells'):
             data = load_ALLdata()
