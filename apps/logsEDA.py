@@ -4,9 +4,10 @@ import numpy as np
 import pandas as pd
 from plotly import graph_objs as go
 from plotly.subplots import make_subplots
+import lasio
 
 wells = ("Crisol-1", "Crisol-2", "Crisol-3",
-         "Norean-1", "Aguachica-2", "Bandera-1", "Caramelo-1", "Caramelo-2", "Caramelo-3", "Pital-1", "Toposi-2HST1", "LaEstancia-1")
+         "Norean-1", "Aguachica-2", "Bandera-1", "Caramelo-1", "Caramelo-2", "Caramelo-3", "Pital-1", "Toposi-2HST1", "La Estancia-1")
 
 columns = ['SP', 'RD', 'RM', 'RS',
            'GR', 'NPHI', 'DT', 'RHOB']
@@ -35,8 +36,17 @@ def app():
         return data
 
     ##########
+    # @st.cache
+    def load_wellTops():
+        wellTop = pd.read_csv(r'data/wellTops/wellTops.csv')
 
-    logs_params, logs_plot = st.columns((1, 4))
+        wellTop = wellTop[wellTop['Well identifier'] == selected_well]
+
+        return wellTop
+
+    ##############
+
+    logs_params, logs_plot, logs_summary = st.columns((1, 3, 1))
 
     with logs_params:
         st.markdown('## Parameters')
@@ -45,7 +55,154 @@ def app():
 
         modeType = logs_params.radio('Mode', mode)
 
-        if (modeType == 'All Wells'):
+        if modeType == 'Single Well':
+
+            wells = ("Aguachica-2", "Bandera-1", "Caramelo-1", "Caramelo-2", "Caramelo-3", "Caramelo-5",  "Crisol-1", "Crisol-2", "Crisol-3",
+                     "Eucalipto-1", "La Estancia-1", "La Estancia- HST1", "Norean-1", "Pital-1", "Preludio-1", "Reposo-1", "Sabal-1",
+                     "Toposi-1", "Toposi-2", "Toposi-2HST1")
+
+            selected_well = logs_params.selectbox("Select a well", wells)
+
+            if selected_well == "Aguachica-2":
+                well = lasio.read(r"data/wellLogs/AGUACHICA-2.las")
+
+            elif selected_well == "Bandera-1":
+                well = lasio.read(r"data/wellLogs/BANDERA-1.las")
+
+            elif selected_well == "Caramelo-1":
+                well = lasio.read(r"data/wellLogs/CARAMELO-1.las")
+
+            elif selected_well == "Caramelo-2":
+                well = lasio.read(r"data/wellLogs/CARAMELO-2.las")
+
+            elif selected_well == "Caramelo-3":
+                well = lasio.read(r"data/wellLogs/CARAMELO-3.las")
+
+            elif selected_well == "Caramelo-5":
+                well = lasio.read(r"data/wellLogs/CARAMELO-5.las")
+
+            elif selected_well == "Crisol-1":
+                well = lasio.read(r"data/wellLogs/CRISOL-1.las")
+
+            elif selected_well == "Crisol-2":
+                well = lasio.read(r"data/wellLogs/CRISOL-2.las")
+
+            elif selected_well == "Crisol-3":
+                well = lasio.read(r"data/wellLogs/CRISOL-3.las")
+
+            elif selected_well == "Eucalipto-1":
+                well = lasio.read(r"data/wellLogs/EUCALIPTO-1.las")
+
+            elif selected_well == "La Estancia-1":
+                well = lasio.read(r"data/wellLogs/LA ESTANCIA-1.las")
+
+            elif selected_well == "La Estancia- HST1":
+                well = lasio.read(r"data/wellLogs/LA ESTANCIA1HST1.las")
+
+            elif selected_well == "Norean-1":
+                well = lasio.read(r"data/wellLogs/NOREAN-1.las")
+
+            elif selected_well == "Pital-1":
+                well = lasio.read(r"data/wellLogs/PITAL-1.las")
+
+            elif selected_well == "Preludio-1":
+                well = lasio.read(r"data/wellLogs/PRELUDIO-1.las")
+
+            elif selected_well == "Reposo-1":
+                well = lasio.read(r"data/wellLogs/REPOSO-1.las")
+
+            elif selected_well == "Sabal-1":
+                well = lasio.read(r"data/wellLogs/SABAL-1.las")
+
+            elif selected_well == "Toposi-1":
+                well = lasio.read(r"data/wellLogs/TOPOSI-1.las")
+
+            elif selected_well == "Toposi-2":
+                well = lasio.read(r"data/wellLogs/TOPOSI-2.las")
+
+            elif selected_well == "Toposi-2HST1":
+                well = lasio.read(r"data/wellLogs/TOPOSI 2-HST1.las")
+
+            mnemonic = []
+
+            for i in range(len(well.curves)):
+                mnemonic.append(well.curves[i].mnemonic)
+
+            well_df = pd.DataFrame(well.data, columns=mnemonic)
+
+            mnemonic.remove('DEPTH')
+
+            well_df = well_df.dropna()
+
+            selected_logs = logs_params.multiselect("Logs", mnemonic,
+                                                    default=mnemonic)
+
+            fig = go.Figure()
+
+            fig = make_subplots(
+                rows=1, cols=len(selected_logs), shared_yaxes=True)
+
+            for i in range(len(selected_logs)):
+                fig.add_trace(go.Scatter(
+                    x=well_df[selected_logs[i]], y=well_df['DEPTH'], name=selected_logs[i]), row=1, col=i+1)
+
+            fig.update_yaxes(autorange="reversed")
+            fig.update_layout(
+                yaxis_title="Depth [ft]",
+                legend=dict(
+                    orientation="h",
+                ),
+                # showlegend=False,
+                autosize=True,
+                width=1000,
+                height=700,
+                margin=dict(
+                    l=50,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0
+                ))
+
+            with logs_summary:
+                logs_summary.markdown('## Summary')
+                logSummary_expander = logs_summary.expander('Details')
+                logSummary_expander.write(well_df.describe())
+
+                ###############################
+                logs_summary.markdown('## Well Tops')
+
+                wellTops_mode = logs_summary.radio(
+                    'Well Tops', ['Off', 'On'])
+
+                if wellTops_mode == 'On':
+
+                    wellTop = load_wellTops()
+
+                    wellTop.drop('Well identifier', axis=1, inplace=True)
+
+                    wellLogTable_expander = logs_summary.expander(
+                        'Well Logs (MD)')
+
+                    wellLogTable_expander.table(wellTop)
+
+                    wellTops = wellTop['Surface'].unique()
+
+                    selected_wellTops = logs_summary.multiselect(
+                        "Well Tops", wellTops)
+
+                    # wellSelectionDisplay = []
+
+                    for i in range(len(selected_wellTops)):
+                        wellSelection = wellTop[wellTop['Surface']
+                                                == selected_wellTops[i]]
+
+                        fig.add_hline(y=int(wellSelection.MD),  line_width=1,
+                                      line_dash="dash", line_color="black")
+
+            logs_plot.plotly_chart(fig)
+
+        elif (modeType == 'All Wells'):
             data = load_ALLdata()
 
             data_crisol_1 = data[data['Well Name'] == "Crisol-1"]
@@ -310,39 +467,6 @@ def app():
 
                 logs_plot.write(
                     'Note: Zero values were replaced by NAN.')
-
-        elif (modeType == 'Single Well'):
-
-            selected_well = logs_params.selectbox("Select a well", wells)
-
-            plot_selectionVariable = logs_params.multiselect(
-                'Feature:', columns, default='SP')
-
-            wellTops_mode = logs_params.radio(
-                'Well Tops', ['Off', 'On'])
-
-            data = load_data()
-
-            fig = go.Figure()
-
-            # logs_plot.write(data)
-            # logs_plot.write(data[plot_selectionVariable])
-
-            # logs_plot.write(len(plot_selectionVariable))
-            # logs_plot.write(data[plot_selectionVariable[0]])
-
-            for i in range(len(plot_selectionVariable)):
-                fig = make_subplots(
-                    rows=1, cols=len(plot_selectionVariable), horizontal_spacing=0.05)
-
-                fig.add_trace(go.Scatter(
-                    x=data[plot_selectionVariable[i]], y=data['Depth'], name=plot_selectionVariable[i]), row=1, col=i+1)
-
-            fig.update_yaxes(autorange="reversed")
-            fig.update_layout(width=400, height=700)
-            fig.update_layout(
-                yaxis_title="Depth [ft]")
-            logs_plot.plotly_chart(fig)
 
         elif (modeType == 'Multi Well'):
             pass
