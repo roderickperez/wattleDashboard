@@ -23,6 +23,9 @@ st.sidebar.markdown("""
 # VMM-1
 """)
 
+st.write(
+    '<style>div.row-widget.stRadio > div{flex-direction:row;}</style>', unsafe_allow_html=True)
+
 
 # Add all your application here
 app.add_app("Home", home.app)
@@ -40,8 +43,8 @@ app.add_app("Market Finance Data", marketFinance.app)
 # The main app
 app.run()
 
-st.sidebar.write("Version: 0.3.1")
-st.sidebar.write("Last Update: August, 12th, 2021")
+st.sidebar.write("Version: 0.3.3")
+st.sidebar.write("Last Update: August, 17th, 2021")
 
 st.sidebar.markdown("### Information")
 

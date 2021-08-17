@@ -3,9 +3,21 @@ import folium
 from streamlit_folium import folium_static
 from plotly import graph_objs as go
 import pandas as pd
+import wellpathpy as wp
+import numpy as np
 
 
 def app():
+
+    wells = ("Crisol-1", "Crisol-2", "Crisol-3",
+             "Norean-1", "Aguachica-2", "Bandera-1",
+             "Eucalipto-1", "Caramelo-1", "Caramelo-2",
+             "Caramelo-3", "Pital-1",
+             "Toposi-2HST2", "La Estancia-1",
+             "La Estancia-1H ST1", "La Estancia-1H ST2",
+             "Norean-1", "Pital-1", "Preludio-1",
+             "Reposo-1", "Sabal-1", "Toposi-1",
+             "Toposi-2", "Toposi-2HST1")
 
     st.markdown('# Viewer')
 
@@ -393,6 +405,344 @@ def app():
             viewer_plot.plotly_chart(fig)
 
         elif viewerMode == '3D View':
-            pass
 
-    viewer_plot
+            fig = go.Figure()
+
+            mapSettingExpander = viewer_params.expander('Map Settings')
+
+            lineWidth = mapSettingExpander.slider('Line Width:',
+                                                  min_value=0, value=10, max_value=20)
+
+            showObject = viewer_params.multiselect(
+                'Object', ['Wells', 'Polygons', 'Well Tops', 'Surfaces'], default=['Wells', 'Polygons'])
+
+            if 'Wells' in showObject:
+                showWells = viewer_params.multiselect(
+                    'Wells', wells, default=wells)
+
+                if 'Aguachica-2' in showWells:
+                    aguachica_2 = pd.read_csv(
+                        "data/wellTrajectory/aguachica-2.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=aguachica_2['X'], y=aguachica_2['Y'], z=aguachica_2['Z'], name='Aguachica-2',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Bandera-1' in showWells:
+                    bandera_1 = pd.read_csv(
+                        "data/wellTrajectory/bandera-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=bandera_1['X'], y=bandera_1['Y'], z=bandera_1['Z'], name='Bandera-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Caramelo-1' in showWells:
+                    caramelo_1 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=caramelo_1['X'], y=caramelo_1['Y'], z=caramelo_1['Z'], name='Caramelo-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Caramelo-2' in showWells:
+                    caramelo_2 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-2.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=caramelo_2['X'], y=caramelo_2['Y'], z=caramelo_2['Z'], name='Caramelo-2',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Caramelo-3' in showWells:
+                    caramelo_3 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-3.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=caramelo_3['X'], y=caramelo_3['Y'], z=caramelo_3['Z'], name='Caramelo-3',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Caramelo-5' in showWells:
+                    caramelo_5 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-3.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=caramelo_5['X'], y=caramelo_5['Y'], z=caramelo_5['Z'], name='Caramelo-5',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Crisol-1' in showWells:
+                    crisol_1 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-3.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=crisol_1['X'], y=crisol_1['Y'], z=crisol_1['Z'], name='Crisol-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Crisol-2' in showWells:
+                    crisol_2 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-2.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=crisol_2['X'], y=crisol_2['Y'], z=crisol_2['Z'], name='Crisol-2',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Crisol-3' in showWells:
+                    crisol_3 = pd.read_csv(
+                        "data/wellTrajectory/caramelo-3.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=crisol_3['X'], y=crisol_3['Y'], z=crisol_3['Z'], name='Crisol-3',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Eucalipto-1' in showWells:
+                    eucalipto_1 = pd.read_csv(
+                        "data/wellTrajectory/eucalipto-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=eucalipto_1['X'], y=eucalipto_1['Y'], z=eucalipto_1['Z'], name='Eucalipto-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'La Estancia-1' in showWells:
+                    laEstancia_1 = pd.read_csv(
+                        "data/wellTrajectory/laEstancia-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=laEstancia_1['X'], y=laEstancia_1['Y'], z=laEstancia_1['Z'], name='La Estancia-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'La Estancia-1H ST1' in showWells:
+                    laEstancia_1H_ST1 = pd.read_csv(
+                        "data/wellTrajectory/laEstancia-1H_ST1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=laEstancia_1H_ST1['X'], y=laEstancia_1H_ST1['Y'], z=laEstancia_1H_ST1['Z'], name='La Estancia-1H ST1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'La Estancia-1H ST2' in showWells:
+                    laEstancia_1H_ST2 = pd.read_csv(
+                        "data/wellTrajectory/laEstancia-1H_ST2.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=laEstancia_1H_ST2['X'], y=laEstancia_1H_ST2['Y'], z=laEstancia_1H_ST2['Z'], name='La Estancia-1H ST2',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Norean-1' in showWells:
+                    norean_1 = pd.read_csv(
+                        "data/wellTrajectory/norean-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=norean_1['X'], y=norean_1['Y'], z=norean_1['Z'], name='Norean-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Norean-1' in showWells:
+                    norean_1 = pd.read_csv(
+                        "data/wellTrajectory/norean-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=norean_1['X'], y=norean_1['Y'], z=norean_1['Z'], name='Norean-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Pital-1' in showWells:
+                    pital_1 = pd.read_csv(
+                        "data/wellTrajectory/pital-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=pital_1['X'], y=pital_1['Y'], z=pital_1['Z'], name='Pital-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Preludio-1' in showWells:
+                    preludio_1 = pd.read_csv(
+                        "data/wellTrajectory/preludio-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=preludio_1['X'], y=preludio_1['Y'], z=preludio_1['Z'], name='Preludio-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Reposo-1' in showWells:
+                    reposo_1 = pd.read_csv(
+                        "data/wellTrajectory/reposo-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=reposo_1['X'], y=reposo_1['Y'], z=reposo_1['Z'], name='Reposo-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Sabal-1' in showWells:
+                    sabal_1 = pd.read_csv(
+                        "data/wellTrajectory/sabal-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=sabal_1['X'], y=sabal_1['Y'], z=sabal_1['Z'], name='Sabal-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Toposi-1' in showWells:
+                    toposi_1 = pd.read_csv(
+                        "data/wellTrajectory/toposi-1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=toposi_1['X'], y=toposi_1['Y'], z=toposi_1['Z'], name='Toposi-1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Toposi-2' in showWells:
+                    toposi_2 = pd.read_csv(
+                        "data/wellTrajectory/toposi-2.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=toposi_2['X'], y=toposi_2['Y'], z=toposi_2['Z'], name='Toposi-2',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Toposi-2HST1' in showWells:
+                    toposi_2H = pd.read_csv(
+                        "data/wellTrajectory/toposi-2H.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=toposi_2H['X'], y=toposi_2H['Y'], z=toposi_2H['Z'], name='Toposi-2HST1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+            if 'Polygons' in showObject:
+                showPolygons = viewer_params.multiselect(
+                    'Polygons', ['Area', 'Seismic'], default=['Area', 'Seismic'])
+
+                if 'Area' in showPolygons:
+                    area_VMM1 = pd.read_csv(
+                        "data/wellTrajectory/area_VMM1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=area_VMM1['X'], y=area_VMM1['Y'], z=area_VMM1['Z'], name='Area',
+                        mode='lines',
+                        line=dict(
+                            width=5
+                        )
+                    ))
+
+                if 'Seismic' in showPolygons:
+                    seismic_VMM1 = pd.read_csv(
+                        "data/wellTrajectory/seismic_VMM1.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=seismic_VMM1['X'], y=seismic_VMM1['Y'], z=seismic_VMM1['Z'], name='Seismic',
+                        mode='lines',
+                        line=dict(
+                            width=5
+                        )
+                    ))
+
+            fig.update_scenes(xaxis_autorange="reversed",
+                              yaxis_autorange="reversed",
+                              zaxis_autorange="reversed")
+
+            fig.update_layout(
+                width=1300,
+                height=700,
+                showlegend=True,
+                autosize=False,
+                margin=dict(
+                    l=0,
+                    r=0,
+                    b=0,
+                    t=0,
+                    pad=0),
+                scene=dict(
+                    camera=dict(
+                        up=dict(
+                            x=0,
+                            y=0,
+                            z=1
+                        ),
+                        eye=dict(
+                            x=0,
+                            y=1.0707,
+                            z=1,
+                        )
+                    ),
+                    aspectratio=dict(x=1, y=1, z=0.7),
+                    aspectmode='manual'
+                ),
+            )
+
+            viewer_plot.plotly_chart(fig)

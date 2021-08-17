@@ -215,9 +215,9 @@ def app():
                 # Forecast Parameters
 
                 train_perct = forecastParameters.slider('Train (days):',
-                                                        min_value=0.0, value=0.7, max_value=1.0)
+                                                        min_value=0.05, value=0.7, max_value=1.0, step=0.05)
                 test_perct = forecastParameters.slider('Test (days):',
-                                                       min_value=0.0, value=1.0-train_perct, max_value=1.0)
+                                                       min_value=0.0, value=1.0-train_perct, max_value=0.90, step=0.05)
 
                 date_first = data_df['time'].iloc[0].date()
 
@@ -891,7 +891,7 @@ def app():
 
                     # Forecast Results
 
-                    forecastResultsExpander = forecast_plot.xpander(
+                    forecastResultsExpander = forecast_plot.expander(
                         'Forecast Result')
 
                     forecastResultsExpander.write(fcst)
@@ -963,7 +963,7 @@ def app():
                     output_forecast.markdown(
                         f"<h3 style = 'text-align: center; color: black;'>{EUR_}</h3>", unsafe_allow_html=True)
 
-                    EURBoundariesExpander = st.xpander(
+                    EURBoundariesExpander = st.expander(
                         'EUR Boundaries')
 
                     EURBoundariesExpander.markdown(

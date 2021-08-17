@@ -4,9 +4,7 @@ from plotly import graph_objs as go
 
 
 def app():
-    st.markdown('# Home')
-
-    st.markdown("## Production Summary | VMM-1")
+    st.markdown('# Production Summary | VMM-1')
     st.write("Updated: 6/28/2021")
 
     @st.cache
@@ -135,21 +133,9 @@ def app():
     ##############################################
 
     # First Row
-    st.markdown("## Current")
-
-    st.markdown("### Field")
-
-    gas_current, oil_current, water_current = st.columns(3)
+    gas_current, gauge_gas = st.columns(2)
 
     with gas_current:
-        gas_current.markdown("### Gas [MCF]")
-
-        gas_current_total = gas_current_caramelo_2+gas_current_caramelo_3 + \
-            gas_current_toposi_1+gas_current_toposi_2H+gas_current_laEstancia_1H
-
-        gas_current_total = f"{gas_current_total:,}"
-        gas_current.markdown(
-            f"<h1 style = 'text-align: center; color: red;'>{gas_current_total}</h1>", unsafe_allow_html=True)
 
         fig_current_gas = go.Figure()
         fig_current_gas.add_trace(
@@ -159,59 +145,62 @@ def app():
                    domain=dict(x=[0.0, 0.0]), hole=.5))
 
         fig_current_gas.update_traces(textposition='inside')
-        fig_current_gas.update_layout(
-            uniformtext_minsize=20, uniformtext_mode='hide')
         fig_current_gas.update_layout(legend=dict(
-            yanchor="top", y=0.99, xanchor="left", x=0.01))
+            yanchor="bottom", y=0.1, xanchor="left", x=0.01))
+
+        fig_current_gas.update_layout(
+
+            uniformtext_minsize=20,
+            uniformtext_mode='hide',
+            legend=dict(
+                orientation="h",
+            ),
+            # showlegend=False,
+            autosize=True,
+            width=550,
+            height=700,
+            margin=dict(
+                l=50,
+                r=50,
+                b=0,
+                t=0,
+                pad=100
+            ))
         gas_current.plotly_chart(fig_current_gas)
 
-    with oil_current:
-        oil_current.markdown("### Oil [Bbls]")
+    with gauge_gas:
 
-        oil_current_total = oil_current_caramelo_2+oil_current_caramelo_3 + \
-            oil_current_toposi_1+oil_current_toposi_2H+oil_current_laEstancia_1H
+        gas_current_total = gas_current_caramelo_2+gas_current_caramelo_3 + \
+            gas_current_toposi_1+gas_current_toposi_2H+gas_current_laEstancia_1H
 
-        oil_current_total = f"{oil_current_total:,}"
-        oil_current.markdown(
-            f"<h1 style = 'text-align: center; color: green;'>{oil_current_total}</h1>", unsafe_allow_html=True)
+        # gas_current_total = f"{gas_current_total:,}"
+        # gas_current.markdown(
+        #     f"<h1 style = 'text-align: center; color: red;'>{gas_current_total}</h1>", unsafe_allow_html=True)
 
-        fig_current_oil = go.Figure()
-        fig_current_oil.add_trace(
-            go.Pie(values=[oil_current_caramelo_2, oil_current_caramelo_3, oil_current_toposi_1, oil_current_toposi_2H, oil_current_laEstancia_1H],
-                   labels=['Caramelo-2', 'Caramelo-3',
-                           'Toposi-1', 'Toposi-2H', 'La Estancia-1H'],
-                   domain=dict(x=[0.0, 0.0]), hole=.5))
+        fig_gaugeGas = go.Figure(go.Indicator(
+            domain={'x': [0, 1], 'y': [0, 1]},
+            value=gas_current_total,
+            mode="gauge+number+delta",
+            title={'text': "Gas Production [Kcfd]"},
+            delta={'reference': 6000},
+            gauge={'axis': {'range': [None, 7000]},
+                   'steps': [
+                {'range': [0, 4500], 'color': "lightgray"},
+                {'range': [4500, 5500], 'color': "lightgreen"}],
+                'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 6000}}))
 
-        fig_current_oil.update_traces(textposition='inside')
-        fig_current_oil.update_layout(
-            uniformtext_minsize=20, uniformtext_mode='hide')
-        fig_current_oil.update_layout(legend=dict(
-            yanchor="top", y=0.99, xanchor="left", x=0.01))
-        oil_current.plotly_chart(fig_current_oil)
-
-    with water_current:
-        water_current.markdown("### Water [Bbls]")
-
-        water_current_total = water_current_caramelo_2+water_current_caramelo_3 + \
-            water_current_toposi_1+water_current_toposi_2H+water_current_laEstancia_1H
-
-        water_current_total = f"{water_current_total:,}"
-        water_current.markdown(
-            f"<h1 style = 'text-align: center; color: blue;'>{water_current_total}</h1>", unsafe_allow_html=True)
-
-        fig_current_water = go.Figure()
-        fig_current_water.add_trace(
-            go.Pie(values=[water_current_caramelo_2, water_current_caramelo_3, water_current_toposi_1, water_current_toposi_2H, water_current_laEstancia_1H],
-                   labels=['Caramelo-2', 'Caramelo-3',
-                           'Toposi-1', 'Toposi-2H', 'La Estancia-1H'],
-                   domain=dict(x=[0.0, 0.0]), hole=.5))
-
-        fig_current_water.update_traces(textposition='inside')
-        fig_current_water.update_layout(uniformtext_minsize=20,
-                                        uniformtext_mode='hide')
-        fig_current_water.update_layout(legend=dict(
-            yanchor="top", y=0.99, xanchor="left", x=0.01))
-        water_current.plotly_chart(fig_current_oil)
+        fig_gaugeGas.update_layout(
+            autosize=True,
+            width=750,
+            height=700,
+            margin=dict(
+                l=50,
+                r=50,
+                b=0,
+                t=0,
+                pad=100
+            ))
+        gauge_gas.plotly_chart(fig_gaugeGas)
 
     st.markdown("<hr/>", unsafe_allow_html=True)
 
