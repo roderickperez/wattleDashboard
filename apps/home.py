@@ -44,7 +44,7 @@ def app():
     gas_cum_toposi_1 = round(
         data_Toposi_1['Gas Production [Kcfd]'].sum(), 2)
     gas_cum_toposi_2H = round(
-        data_Toposi_1['Gas Production [Kcfd]'].sum(), 2)
+        data_Toposi_2H['Gas Production [Kcfd]'].sum(), 2)
     gas_cum_laEstancia_1H = round(
         data_LaEstancia_1H['Gas Production [Kcfd]'].sum(), 2)
 
@@ -101,7 +101,7 @@ def app():
     gas_current_toposi_1 = round(
         data_Toposi_1['Gas Production [Kcfd]'].iloc[-1], 2)
     gas_current_toposi_2H = round(
-        data_Toposi_1['Gas Production [Kcfd]'].iloc[-1], 2)
+        data_Toposi_2H['Gas Production [Kcfd]'].iloc[-1], 2)
     gas_current_laEstancia_1H = round(
         data_LaEstancia_1H['Gas Production [Kcfd]'].iloc[-1], 2)
     ##############################################
@@ -114,7 +114,7 @@ def app():
     oil_current_toposi_1 = round(
         data_Toposi_1['Volumen Oil [Bbls]'].iloc[-1], 2)
     oil_current_toposi_2H = round(
-        data_Toposi_1['Volumen Oil [Bbls]'].iloc[-1], 2)
+        data_Toposi_2H['Volumen Oil [Bbls]'].iloc[-1], 2)
     oil_current_laEstancia_1H = round(
         data_LaEstancia_1H['Volumen Oil [Bbls]'].iloc[-1], 2)
     ##############################################
@@ -127,7 +127,7 @@ def app():
     water_current_toposi_1 = round(
         data_Toposi_1['Volumen Water [bls/d]'].iloc[-1], 2)
     water_current_toposi_2H = round(
-        data_Toposi_1['Volumen Water [bls/d]'].iloc[-1], 2)
+        data_Toposi_2H['Volumen Water [bls/d]'].iloc[-1], 2)
     water_current_laEstancia_1H = round(
         data_LaEstancia_1H['Volumen Water [bls/d]'].iloc[-1], 2)
     ##############################################
@@ -136,6 +136,13 @@ def app():
     gas_current, gauge_gas = st.columns(2)
 
     with gas_current:
+
+        # gas_current_allWells = round(gas_current_caramelo_2 + gas_current_caramelo_3 +
+        #                              gas_current_toposi_1 + gas_current_toposi_2H + gas_current_laEstancia_1H, 2)
+
+        # gas_current_allWells = f"{gas_current_allWells:,}"
+        # gas_current.markdown(
+        #     f"<h1 style = 'text-align: center; color: red;'>Current: {gas_current_allWells} [Kcfd]</h1>", unsafe_allow_html=True)
 
         fig_current_gas = go.Figure()
         fig_current_gas.add_trace(
@@ -164,29 +171,25 @@ def app():
                 r=50,
                 b=0,
                 t=0,
-                pad=100
+                pad=0
             ))
         gas_current.plotly_chart(fig_current_gas)
 
     with gauge_gas:
 
-        gas_current_total = gas_current_caramelo_2+gas_current_caramelo_3 + \
-            gas_current_toposi_1+gas_current_toposi_2H+gas_current_laEstancia_1H
-
-        # gas_current_total = f"{gas_current_total:,}"
-        # gas_current.markdown(
-        #     f"<h1 style = 'text-align: center; color: red;'>{gas_current_total}</h1>", unsafe_allow_html=True)
+        gas_current_allWells = round(gas_current_caramelo_2 + gas_current_caramelo_3 +
+                                     gas_current_toposi_1 + gas_current_toposi_2H + gas_current_laEstancia_1H, 2)
 
         fig_gaugeGas = go.Figure(go.Indicator(
             domain={'x': [0, 1], 'y': [0, 1]},
-            value=gas_current_total,
+            value=gas_current_allWells,
             mode="gauge+number+delta",
             title={'text': "Gas Production [Kcfd]"},
             delta={'reference': 6000},
             gauge={'axis': {'range': [None, 7000]},
                    'steps': [
-                {'range': [0, 4500], 'color': "lightgray"},
-                {'range': [4500, 5500], 'color': "lightgreen"}],
+                {'range': [0, 5800], 'color': "lightgray"},
+                {'range': [5800, 6200], 'color': "lightgreen"}],
                 'threshold': {'line': {'color': "red", 'width': 4}, 'thickness': 0.75, 'value': 6000}}))
 
         fig_gaugeGas.update_layout(
