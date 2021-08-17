@@ -3,8 +3,6 @@ import folium
 from streamlit_folium import folium_static
 from plotly import graph_objs as go
 import pandas as pd
-import wellpathpy as wp
-import numpy as np
 
 
 def app():
