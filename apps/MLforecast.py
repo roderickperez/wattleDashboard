@@ -1,7 +1,5 @@
 import streamlit as st
 import copy
-import time
-import io
 import base64
 import matplotlib.pyplot as plt
 
