@@ -17,6 +17,8 @@ def app():
              "Reposo-1", "Sabal-1", "Toposi-1",
              "Toposi-2", "Toposi-2HST1")
 
+    wellUndrilled = ["Toposi-Este 1 (A)", "Toposi-Este 1 (B)"]
+
     st.markdown('# Viewer')
 
     viewer_params, viewer_plot = st.columns(
@@ -38,7 +40,7 @@ def app():
                            zoom_start=zoom, tiles="cartodbpositron")
 
             showObject = viewer_params.multiselect(
-                'Object', ['Wells', 'Seismic Polygon', 'Surfaces'], default=['Wells', 'Seismic Polygon'])
+                'Object', ['Wells', 'Seismic Polygon', 'Surfaces', 'Wells (Undrilled)'], default=['Wells', 'Seismic Polygon'])
 
             if 'Wells' in showObject:
 
@@ -221,6 +223,46 @@ def app():
                         fill_color=fill
                     ).add_to(m)
 
+            if 'Wells (Undrilled)' in showObject:
+                viewer_params.markdown('#### Wells (Undrilled)')
+
+                wellsSettingExpander = viewer_params.expander(
+                    'Well (Undrilled) Settings')
+
+                radius = wellsSettingExpander.slider('Radius (Undrilled):',
+                                                     min_value=0, value=10, max_value=20)
+
+                color = wellsSettingExpander.color_picker(
+                    'Color (Undrilled):', '#1A00F9')
+
+                fill = wellsSettingExpander.radio(
+                    'Fill (Undrilled):', [True, False])
+
+                wellUndrilledList = ["Toposi-Este 1 (A)", "Toposi-Este 1 (B)"]
+
+                wellUndrilled = st.multiselect(
+                    'Wells (Undrilled):', wellUndrilledList, default=wellUndrilledList)
+
+                if 'Toposi-Este 1 (A)' in wellUndrilled:
+                    folium.CircleMarker(
+                        location=[8.321204, -73.65627],
+                        popup="Toposi-Este 1 (A)",
+                        radius=radius,
+                        color=color,
+                        fill=fill,
+                        fill_color=fill
+                    ).add_to(m)
+
+                if 'Toposi-Este 1 (B)' in wellUndrilled:
+                    folium.CircleMarker(
+                        location=[8.324856, -73.658123],
+                        popup="Toposi-Este 1 (B)",
+                        radius=radius,
+                        color=color,
+                        fill=fill,
+                        fill_color=fill
+                    ).add_to(m)
+
             if 'Seismic Polygon' in showObject:
                 viewer_params.markdown('#### Polygons')
 
@@ -251,7 +293,7 @@ def app():
             if 'Surfaces' in showObject:
                 viewer_params.markdown('#### Surfaces')
 
-                surfacesSettingExpander = viewer_params.beta_expander(
+                surfacesSettingExpander = viewer_params.expander(
                     'Surface Settings')
 
                 opacity = surfacesSettingExpander.slider('Surface Opacity:',
@@ -412,7 +454,7 @@ def app():
                                                   min_value=0, value=10, max_value=20)
 
             showObject = viewer_params.multiselect(
-                'Object', ['Wells', 'Polygons', 'Well Tops', 'Surfaces'], default=['Wells', 'Polygons'])
+                'Object', ['Wells', 'Polygons', 'Well Tops', 'Surfaces', 'Wells (Undrilled)'], default=['Wells', 'Polygons'])
 
             if 'Wells' in showObject:
                 showWells = viewer_params.multiselect(
@@ -676,6 +718,34 @@ def app():
 
                     fig.add_trace(go.Scatter3d(
                         x=toposi_2H['X'], y=toposi_2H['Y'], z=toposi_2H['Z'], name='Toposi-2HST1',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+            if 'Wells (Undrilled)' in showObject:
+                showUndrilledWells = viewer_params.multiselect(
+                    'Well (Undrilled)', wellUndrilled, default=wellUndrilled)
+
+                if 'Toposi-Este 1 (A)' in showUndrilledWells:
+                    toposi_este_1A = pd.read_csv(
+                        "data/wellTrajectory/toposi_este_1A.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=toposi_este_1A['X'], y=toposi_este_1A['Y'], z=toposi_este_1A['Z'], name='Toposi Este-1A',
+                        mode='lines',
+                        line=dict(
+                            width=lineWidth
+                        )
+                    ))
+
+                if 'Toposi-Este 1 (B)' in showUndrilledWells:
+                    toposi_este_1B = pd.read_csv(
+                        "data/wellTrajectory/toposi_este_1B.csv")
+
+                    fig.add_trace(go.Scatter3d(
+                        x=toposi_este_1B['X'], y=toposi_este_1B['Y'], z=toposi_este_1B['Z'], name='Toposi Este-1B',
                         mode='lines',
                         line=dict(
                             width=lineWidth
