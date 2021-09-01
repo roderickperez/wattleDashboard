@@ -51,7 +51,7 @@ def app():
             'data/VMM1_AllWells_DetailedProduction_Updated.csv', header=None, infer_datetime_format=True)
 
         # data = pd.DataFrame(data).dropna()
-        data.columns = ['Date', 'DP in H2O', 'Well Head Pressure [PSI]', 'Casing Pressure [Psi]',
+        data.columns = ['Date', 'DP in H2O', 'Well Head Pressure [PSI]', 'Casing Pressure [PSI]',
                         'Choque Fijo', 'Choque Adjustable', 'After Opening to 14/64" Current Flowrate',
                         'Current Uplift (14/64") [MCFD]', 'Temp Line [°F]', 'Pressure Line [PSI]', 'Heater Temperature [°F]',
                         'Orifice Plate', 'Gas Production [Kcfd]', 'After Opening to 12/64" Current Flowrate',
@@ -344,7 +344,7 @@ def app():
                         changepoint_prior_scale = modelParametersExpander.slider(
                             'Changepoint Prior Scale', min_value=0.00, value=0.05, max_value=1.00, help='Parameter modulating the flexibility of the automatic changepoint selection. Large values will allow many changepoints, small values will allow few changepoints.')
                         interval_width = modelParametersExpander.slider(
-                            'Interval Width', min_value=0.00, value=0.95, max_value=1.00, help='Width of the uncertainty intervals provided for the forecast.')
+                            'Interval Width', min_value=0.00, value=0.10, max_value=1.00, help='Width of the uncertainty intervals provided for the forecast.')
                         uncertainty_samples = modelParametersExpander.slider(
                             'Uncertainty Samples', min_value=0, value=1000, max_value=len(data_df_), help='Number of simulated draws used to estimate uncertainty intervals. Settings this value to 0 will disable uncertainty estimation and speed up the calculation.')
 
@@ -2091,7 +2091,7 @@ def app():
                     'Model Parameters')
 
                 trend = modelParametersExpander.radio(
-                    'Trend', ['c', 'ct', 'ctt', 'nc'], index=2, help='“c” - add constant (Default), “ct” - constant and trend, “ctt” - constant, linear and quadratic trend, “n”/“nc” - no constant, no trend.')
+                    'Trend', ['c', 'ct', 'ctt', 'nc'], index=3, help='“c” - add constant (Default), “ct” - constant and trend, “ctt” - constant, linear and quadratic trend, “n”/“nc” - no constant, no trend.')
 
                 alpha = modelParametersExpander.slider(
                     'Alpha', min_value=0.0, value=0.05, max_value=1.0, help='Significance level of confidence interval.')
