@@ -213,14 +213,8 @@ def app():
         economicEquations_expander.markdown('$R$=Revenue')
         economicEquations_expander.markdown('$I$=Investments')
         economicEquations_expander.markdown('$E$=Expenses')
-        economicEquations_expander.markdown('$R$=Federal Income Taxes')
+        economicEquations_expander.markdown('$FIT$=Federal Income Taxes')
         economicEquations_expander.markdown('$OS$=Outside Shares')
-
-        economicEquations_expander.markdown("<hr/>", unsafe_allow_html=True)
-
-        economicEquations_expander.write('NRI Eq')
-        economicEquations_expander.markdown(
-            '$NCF = R - I  - E-FIT-OS$')
 
         economicEquations_expander.markdown("<hr/>", unsafe_allow_html=True)
 
@@ -285,6 +279,8 @@ def app():
 
         DCA_forecast['arpsFlowRate_Forecast'] = arpsFlowRate_Forecast
 
+        yAxis = DCA_params.radio('Y-Axis:', ['Normal', 'Logaritmic'])
+
     with prod_plot:
 
         st.markdown('## Plot')
@@ -331,6 +327,9 @@ def app():
         # fig.add_trace(go.Scatter(
         #     x=data['Date'], y=data['relativeError'], name='Absolute Relative Error [Kcfd]'),
         #     row=2, col=1)
+
+        if yAxis == 'Logaritmic':
+            fig.update_yaxes(type="log")
 
         st.plotly_chart(fig)
 

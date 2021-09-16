@@ -2024,7 +2024,7 @@ def app():
                 # Forecast Parameters
 
                 train_perct = forecastParameters.slider('Train (days):',
-                                                        min_value=0.0, value=0.7, max_value=1.0)
+                                                        min_value=0.0, value=0.9, max_value=1.0)
                 test_perct = forecastParameters.slider('Test (days):',
                                                        min_value=0.0, value=1.0-train_perct, max_value=1.0)
 
@@ -2094,7 +2094,7 @@ def app():
                     'Trend', ['c', 'ct', 'ctt', 'nc'], index=3, help='“c” - add constant (Default), “ct” - constant and trend, “ctt” - constant, linear and quadratic trend, “n”/“nc” - no constant, no trend.')
 
                 alpha = modelParametersExpander.slider(
-                    'Alpha', min_value=0.0, value=0.05, max_value=1.0, help='Significance level of confidence interval.')
+                    'Alpha', min_value=0.0, value=0.80, max_value=1.0, help='Significance level of confidence interval.')
 
                 params = VARParams(
                     trend=trend,
@@ -2333,7 +2333,7 @@ def app():
                         errorV2_ = f"{errorV2:,}"
 
                         output_forecast.markdown(
-                            f"<h3 style = 'text-align: center; color: black;'>{errorV2_} [Kcfd]</h3>", unsafe_allow_html=True)
+                            f"<h3 style = 'text-align: center; color: black;'>{errorV2_} [PSI]</h3>", unsafe_allow_html=True)
 
                         output_forecast.markdown(
                             f"### Production")
