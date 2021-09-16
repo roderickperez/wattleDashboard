@@ -5,7 +5,7 @@ from plotly import graph_objs as go
 
 def app():
     st.markdown('# Production Summary | VMM-1')
-    st.write("Updated: 8/29/2021")
+    st.write("Updated: 9/14/2021")
 
     @st.cache
     def load_data():
